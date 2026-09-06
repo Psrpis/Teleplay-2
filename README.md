@@ -1,333 +1,285 @@
-# 📺 TelePlay
+# TelePlay 2.0
 
-**Your personal, self-hosted media server — powered by Telegram.**
+**A private, Telegram-backed media center for your browser, Android device, and TV.**
 
-![TelePlay Banner](files/app_banner.png)
+TelePlay lets you send media to a Telegram bot, keep the source files in a private Telegram storage channel, and stream them on demand through a self-hosted application. The current 2.0 experience adds a cinematic home dashboard, persistent playback state, automatic filename indexing, and direct browsing by series or actor.
 
-Stream and manage your Telegram files on any device — TV, Mobile, or Browser — **without downloading the entire file**. TelePlay uses Telegram as unlimited cloud storage and streams content on-demand at high speed using its **multi-client parallel download** technology. Upload via a Telegram Bot, organize through a Web App, and watch anywhere.
+<p align="center">
+  <img src="docs/assets/teleplay-home-dashboard.png" alt="TelePlay 2.0 home dashboard" width="92%" />
+</p>
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python](https://img.shields.io/badge/python-3.11+-green.svg)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-teal.svg)
-![React](https://img.shields.io/badge/React-18-61dafb.svg)
-![Kotlin](https://img.shields.io/badge/Kotlin-Compose_TV-7f52ff.svg)
+<p align="center">
+  <a href="https://github.com/Psrpis/Teleplay-2"><img src="https://img.shields.io/badge/status-active-7c3aed" alt="Active project" /></a>
+  <img src="https://img.shields.io/badge/license-MIT-2563eb" alt="MIT license" />
+  <img src="https://img.shields.io/badge/backend-FastAPI-0f766e" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/web-React%20%2B%20TypeScript-0891b2" alt="React and TypeScript" />
+  <img src="https://img.shields.io/badge/android-Kotlin%20%2B%20Compose-7c3aed" alt="Kotlin and Compose" />
+</p>
 
----
+> **Design note:** The screenshots in this README are product mockups that communicate the intended 2.0 visual language. Artwork and sample titles shown in them are illustrative.
 
-## ✨ Features
+## What TelePlay 2.0 provides
 
-### 🤖 Telegram Bot — [Full Command List](docs/SETUP.md#part-2-using-the-telegram-bot)
+TelePlay keeps the original Telegram-first workflow while adding media-center organization around the private library. Files remain addressable from the existing browser and player, while the new Home, Series, Actors, Favorites, History, Collections, and Statistics views provide faster discovery.
 
-- Upload any file type (video, audio, documents, photos)
-- Organize files into folders with inline buttons
-- Rename, move, and delete files via chat commands
-- Search your library with `/myfiles`
-- Get an auto-login web link with `/web`
+| Capability | What it does |
+| --- | --- |
+| Private Telegram storage | Stores media in a private Telegram channel and keeps application metadata in SQLAlchemy-backed storage. |
+| On-demand streaming | Streams Telegram content through the existing FastAPI player path instead of requiring a complete local download. |
+| Cinematic Home | Combines a featured item with Continue Watching, Favorites, Recently Added, Recently Watched, and Collections shelves. |
+| Playback memory | Tracks current position, progress percentage, watched state, and viewing history. |
+| Automatic indexing | Reads common filename patterns for series, seasons, episodes, actors, quality, and codec. |
+| Series discovery | Groups episodes by a normalized `series:` tag, even when files are in different folders. |
+| Actor discovery | Groups every file carrying the same `actor:` tag across unrelated series and films. |
+| Global search | Searches filenames and cached metadata with filters for type, watched state, favorites, tags, collection, year, and sort order. |
+| Personal organization | Supports favorites, collections, reusable tags, metadata, preferences, and statistics. |
+| Multi-device API | Exposes additive media-center endpoints for web, Android, and Android TV clients. |
 
-### 🌐 Web App — [Login Methods](docs/SETUP.md#31-web-interface)
+## Filename indexing
 
-- Full file browser with folder navigation
-- Multi-select, batch delete, rename, and move operations
-- Context menu (right-click) on files
-- Inline video/audio player with seeking
-- Three login methods (direct link, login code, [remote authorization](docs/SETUP.md#31-web-interface))
-- Responsive — works on desktop and mobile
-- Cinematic Home dashboard with Continue Watching, Favorites, Recently Added, and viewing history
-- User-scoped Favorites, Watched state, Collections, Tags, Search, Statistics, and Surprise Me
-- Automatic filename indexing for series, seasons, episodes, actors, quality, and codec, with dedicated Series and Actors browsing
-- Cached media metadata and artwork that never replaces the private Telegram-backed source file
+When a file is uploaded, TelePlay treats its filename as an indexing hint without changing the original Telegram filename. A pattern such as:
 
-### 📺 Android TV & Mobile App — [Installation Guide](docs/SETUP.md#32-android-tv--mobile)
-
-- Designed for TV with D-Pad / remote control navigation
-- **Continue Watching** and **Recently Added** rows on the home screen
-- Full-screen ExoPlayer playback with transport controls
-- Download files for offline playback (Mobile)
-- Picture-in-Picture mode (Mobile)
-- Watch progress automatically synced with the server
-- Additive media-center API models for Home, Favorites, Search, and Watched state
-
-### ⚡ Platform — [Architecture Overview](docs/ARCHITECTURE.md)
-
-- **Zero local storage** — all files live on Telegram's unlimited cloud
-- **Multi-user** — each Telegram user gets an isolated library
-- **High-speed streaming** — optional [multi-bot parallel downloads](docs/ARCHITECTURE.md#multi-client-mode-parallel-downloads)
-- **Restricted access** — [whitelist allowed users](docs/SETUP.md#-advanced-features) with `AUTH_USERS`
-- **Public sharing** — generate signed, time-limited links
-- **One-command deploy** — [Docker Compose, Railway, Render, or CapRover](docs/DEPLOYMENT.md)
-
----
-
-## 🏗️ How It Works
-
-```
-  You                Telegram Cloud              Your Server              Your Devices
-  ───                ──────────────              ───────────              ────────────
-   │                                                  │
-   │  1. Send file to Bot ──────────────────────────► │
-   │                         2. Bot forwards to  ───► │ (Private Channel)
-   │                            Storage Channel       │
-   │                                                  │ 3. Saves metadata
-   │                                                  │    to Database
-   │                                                  │
-   │  4. Open Web / TV App ◄──────────────────────────│
-   │                                                  │
-   │  5. Press Play ──────────────────────────────► │
-   │                         6. Fetches chunks   ◄──  │ (from Telegram)
-   │  7. Streams to you ◄────────────────────────── │
-   │                                                  │
+```text
+The.Show.S02E05.oyuncuA.And.oyuncuB.1080p.HEVC.mkv
 ```
 
-Your files are **never stored on your server** — TelePlay streams them directly from Telegram's cloud on demand.
+is converted into searchable facets:
 
----
+```text
+series:The Show
+season:2
+episode:5
+actor:A
+actor:B
+quality:1080p
+codec:hevc
+```
 
-## 📸 Screenshots
-
-### 🌐 Web Interface
-
-<p align="center">
-  <img src="files/web_app_home_screen.png" width="32%" />
-  <img src="files/web_app_player.png" width="32%" />
-  <img src="files/web_app_login_screen.png" width="32%" />
-</p>
-
-### 📺 Android TV
+The parser also recognizes common `S01E02` and `1x02` episode forms, common resolution labels, and common codec labels. Existing libraries can be processed with the **Tag library now** action on the Series or Actors page, or with `POST /api/media/auto-tag`.
 
 <p align="center">
-  <img src="files/tv_home_screen.png" width="32%" />
-  <img src="files/tv_player_screen.png" width="32%" />
-  <img src="files/tv_login_screen.png" width="32%" />
+  <img src="docs/assets/teleplay-series-actors.png" alt="TelePlay Series and Actors discovery interface" width="92%" />
 </p>
 
-### 📱 Mobile App
+## Main user flows
 
-<p align="center">
-  <img src="files/mobile_home_screen.png" width="32%" />
-  <img src="files/mobile_player_screen.png" width="32%" />
-  <img src="files/mobile_downloads_screen.png" width="32%" />
-</p>
+### Upload and watch
 
----
+1. Send a video, audio file, or supported document to the TelePlay Telegram bot.
+2. The bot forwards the media to the configured private storage channel.
+3. TelePlay stores the file record and automatically creates filename-derived tags.
+4. Open the web application or Android client.
+5. Select a media item and stream it through the existing player.
+6. Playback position is synchronized and completed viewing is added to history.
 
-## � Quick Start
+### Find a series
 
-### Prerequisites — [Detailed Steps](docs/DEPLOYMENT.md#-step-1-get-telegram-credentials)
+Open **Series**, select a normalized series tag, and browse all matching episodes. Folder placement does not affect the result because the relationship is stored through namespaced tags rather than physical folder paths.
 
-| Requirement            | How to get it                                          |
-| :--------------------- | :----------------------------------------------------- |
-| **Telegram Bot Token** | Create via [@BotFather](https://t.me/BotFather)        |
-| **API ID & Hash**      | Register at [my.telegram.org](https://my.telegram.org) |
-| **Storage Channel**    | Create a private channel, add your bot as admin        |
-| **Docker**             | [Install Docker](https://docs.docker.com/get-docker/)  |
+### Find an actor across different series
 
-### 1. Clone & Configure
+Open **Actors**, select an actor tag, and view every file carrying that actor facet. This makes an actor discoverable across different series, movies, and folders.
+
+### Backfill an existing library
+
+Automatic tagging runs for new uploads. For existing files, open **Series** or **Actors** and select **Tag library now**. The same operation is available through the API:
 
 ```bash
-git clone https://github.com/yourusername/teleplay.git
-cd teleplay
+curl -X POST "http://localhost:8000/api/media/auto-tag?limit=5000" \
+  -H "Authorization: Bearer <access-token>"
+```
+
+## Media-center API
+
+All endpoints require the existing authenticated bearer token and are available under `/api/media`.
+
+| Area | Endpoints |
+| --- | --- |
+| Home and search | `GET /home`, `GET /search`, `GET /surprise` |
+| Favorites | `GET /favorites`, `POST` and `DELETE /files/{id}/favorite` |
+| Watched state | `PUT /files/{id}/watched` |
+| Progress and history | Existing progress endpoint, `GET` and `DELETE /history` |
+| Collections | `GET` and `POST /collections`, collection update/delete/item replacement endpoints |
+| Tags | `GET` and `POST /tags`, `DELETE /tags/{id}`, `PUT /files/{id}/tags` |
+| Automatic indexing | `POST /auto-tag`, `POST /files/{id}/auto-tag`, `GET /tags?kind=series`, `GET /tags?kind=actor` |
+| Metadata | `GET` and `PUT /files/{id}/metadata` |
+| Personal data | `GET` and `PUT /preferences`, `GET /stats` |
+
+## Architecture
+
+```text
+Telegram Bot
+    │
+    ├── forwards uploads to the private storage channel
+    ├── extracts filename facets
+    └── creates File, MediaMetadata, Tag, and FileTag records
+             │
+             ▼
+FastAPI backend ───────── SQLAlchemy ───────── PostgreSQL or SQLite
+    │
+    ├── authentication and user isolation
+    ├── media-center API
+    ├── filename indexing and search
+    └── streaming and playback progress
+             │
+             ├── React + TypeScript web application
+             └── Kotlin Android TV/mobile clients
+```
+
+TelePlay does not use an external metadata provider for the automatic filename index. Cached descriptive metadata and artwork can be entered through the metadata endpoint, and a legal provider integration can be added later without changing the private-file source of truth.
+
+## Quick start with Docker
+
+### Prerequisites
+
+You need Docker, a Telegram bot token, a Telegram API ID and hash, and a private Telegram channel where the bot has administrator access.
+
+| Requirement | Source |
+| --- | --- |
+| Telegram bot token | [@BotFather](https://t.me/BotFather) |
+| Telegram API ID and hash | [my.telegram.org](https://my.telegram.org) |
+| Private storage channel | Create a private channel and add the bot as an administrator |
+| Docker | [Docker installation guide](https://docs.docker.com/get-docker/) |
+
+### Configure and run
+
+```bash
+git clone https://github.com/Psrpis/Teleplay-2.git
+cd Teleplay-2
 cp .env.example .env
 ```
 
-Edit `.env` with your credentials:
+Set the required values in `.env`:
 
 ```env
 TELEGRAM_API_ID=12345678
-TELEGRAM_API_HASH=abcdef1234567890abcdef1234567890
-TELEGRAM_BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
-TELEGRAM_STORAGE_CHANNEL_ID=-100xxxxxxxxxx
-JWT_SECRET=your-super-secret-key-at-least-32-characters
+TELEGRAM_API_HASH=your_api_hash
+TELEGRAM_BOT_TOKEN=123456:your_bot_token
+TELEGRAM_STORAGE_CHANNEL_ID=-1001234567890
+JWT_SECRET=generate-a-long-random-secret
 
-# Use PostgreSQL (recommended) or SQLite (no setup needed):
-DATABASE_URL=sqlite:///./data/teleplay.db
-# DATABASE_URL=postgresql://postgres:password@db:5432/teleplay
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=change-this-password
+POSTGRES_DB=telegram_tv
+WEB_BASE_URL=http://localhost
 ```
 
-### 2. Deploy
+Start the stack:
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
-That's it! Your services are now running:
+The default services are:
 
-| Service         | URL                   |
-| :-------------- | :-------------------- |
-| **Web App**     | http://localhost      |
-| **Backend API** | http://localhost:8000 |
+| Service | Address |
+| --- | --- |
+| Web application | `http://localhost` |
+| Backend API | `http://localhost:8000` |
+| API documentation | `http://localhost:8000/docs` |
 
-### 3. Start Using
-
-1. Open Telegram and send a video file to your bot.
-2. Send `/web` to get a link to your Web App.
-3. Stream your files! 🎬
-
-> **For detailed setup, usage, and login instructions**, see the **[Setup & Usage Guide](docs/SETUP.md)**.
->
-> **For VPS, Railway, Render, and CapRover deployments**, see the **[Deployment Guide](docs/DEPLOYMENT.md)**.
-
----
-
-## 📱 Android TV & Mobile App
-
-**Download the APK** from the [Releases](../../releases) page:
-
-| APK         | Best For                               |
-| :---------- | :------------------------------------- |
-| `arm64-v8a` | Modern TV boxes, phones, NVIDIA Shield |
-| `universal` | Any device (if unsure, use this one)   |
-
-**Setup:**
-
-1. Install the APK on your device.
-2. Enter your Server URL (e.g., `http://192.168.1.100`).
-3. A 6-digit code will appear — send `/login CODE` to your bot.
-4. Done! Browse and stream your library.
-
-> **For APK signing and release automation**, see the **[Releasing Guide](docs/RELEASING.md)**.
-
----
-
-## ⚙️ Environment Variables
-
-| Variable                      | Required | Description                                                                                          |
-| :---------------------------- | :------: | :--------------------------------------------------------------------------------------------------- |
-| `TELEGRAM_API_ID`             |    ✅    | From [my.telegram.org](https://my.telegram.org)                                                      |
-| `TELEGRAM_API_HASH`           |    ✅    | From [my.telegram.org](https://my.telegram.org)                                                      |
-| `TELEGRAM_BOT_TOKEN`          |    ✅    | From [@BotFather](https://t.me/BotFather)                                                            |
-| `TELEGRAM_STORAGE_CHANNEL_ID` |    ✅    | Private channel ID (starts with `-100`)                                                              |
-| `JWT_SECRET`                  |    ✅    | Secret key for JWT signing (min 32 chars)                                                            |
-| `DATABASE_URL`                |    ✅    | Database connection URL (see below)                                                                  |
-| `WEB_BASE_URL`                |    ❌    | Public URL of the web app                                                                            |
-| `TELEGRAM_HELPER_BOT_TOKENS`  |    ❌    | Extra bot tokens for [parallel downloads](docs/ARCHITECTURE.md#multi-client-mode-parallel-downloads) |
-| `AUTH_USERS`                  |    ❌    | Comma-separated Telegram IDs for restricted access                                                   |
-
-> **💡 DATABASE_URL Options:**
->
-> - **PostgreSQL (recommended):** `postgresql://postgres:password@localhost:5432/teleplay`
-> - **SQLite (no setup needed):** `sqlite:///./data/teleplay.db`
->
-> Use SQLite if you don't want to set up PostgreSQL — it works out of the box for small deployments.
-
----
-
-## 🛠️ Tech Stack
-
-| Layer        | Technology                                       |
-| :----------- | :----------------------------------------------- |
-| **Backend**  | Python 3.11+, FastAPI, Uvicorn                   |
-| **Telegram** | PyroTGFork (MTProto)                             |
-| **Database** | PostgreSQL (prod) / SQLite (dev), SQLAlchemy 2.0 |
-| **Auth**     | JWT (Access + Refresh Tokens)                    |
-| **Web**      | React 18, TypeScript, Vite                       |
-| **Android**  | Kotlin, Jetpack Compose for TV, ExoPlayer        |
-| **Deploy**   | Docker, Docker Compose, Nginx                    |
-
-> **Media-center implementation details:** see the [Media Center guide](docs/MEDIA_CENTER.md) for API additions, database behavior, setup, and verification commands.
-
----
-
-## 📁 Project Structure — [Full Breakdown](docs/ARCHITECTURE.md#-project-structure)
-
-```
-teleplay/
-├── backend/                  # Python backend (FastAPI + Bot)
-│   ├── app/
-│   │   ├── routers/          # API endpoints (auth, files, folders, streaming, tv)
-│   │   ├── bot.py            # Telegram bot command handlers
-│   │   ├── streaming.py      # Multi-client parallel streaming engine
-│   │   ├── models.py         # SQLAlchemy ORM models
-│   │   └── main.py           # FastAPI app entry point
-│   ├── Dockerfile
-│   └── requirements.txt
-├── web/                      # React web interface
-│   ├── src/
-│   │   ├── components/       # UI components
-│   │   ├── lib/api.ts        # API client & hooks
-│   │   └── App.tsx           # Main app with routing
-│   └── Dockerfile
-├── android/                  # Android TV & Mobile app
-│   └── app/src/main/java/    # Kotlin (Compose + ExoPlayer)
-├── docs/                     # Documentation
-│   ├── ARCHITECTURE.md       # Technical deep-dive
-│   ├── DEPLOYMENT.md         # Deployment guide
-│   ├── SETUP.md              # Setup & usage guide
-│   └── RELEASING.md          # APK release process
-├── docker-compose.yml
-└── .env.example
-```
-
----
-
-## 🔧 Development
+## Local development
 
 ### Backend
 
 ```bash
 cd backend
-python -m venv venv
-venv\Scripts\activate        # Linux/Mac: source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env         # Edit with your credentials
-uvicorn app.main:app --reload
+python3 -m compileall -q app
+pytest -q
 ```
 
-### Web App
+Set `DATABASE_URL` to a PostgreSQL URL for production-like development or an async SQLite URL for local testing:
+
+```env
+DATABASE_URL=sqlite+aiosqlite:///./data/teleplay.db
+```
+
+### Web application
 
 ```bash
 cd web
-npm install
+npm ci
 npm run dev
+npm run build
+npx tsc --noEmit
+npm run lint
 ```
 
 ### Android
 
-Open the `android/` folder in Android Studio and build.
+Open `android/` in Android Studio. The repository contains Kotlin API and repository support for the media-center Home, favorites, watched state, search, tags, and automatic tag backfill. A configured Android SDK is required for Gradle builds.
 
----
+## Repository structure
 
-## 🔒 Security — [Details](docs/ARCHITECTURE.md#-security)
+```text
+Teleplay-2/
+├── backend/
+│   ├── app/
+│   │   ├── bot.py                 # Telegram ingestion and bot commands
+│   │   ├── models.py              # Core and media-center SQLAlchemy models
+│   │   ├── services.py            # Filename facets, auto-tagging, shared queries
+│   │   └── routers/
+│   │       ├── media.py           # Home, search, tags, collections, history, stats
+│   │       ├── files.py           # File browsing, progress, and file mutations
+│   │       └── tv.py              # TV-oriented browse endpoints
+│   └── tests/                     # Media-center unit tests
+├── web/
+│   └── src/
+│       ├── components/
+│       │   ├── MediaCenterPage.tsx
+│       │   ├── TagBrowserPage.tsx
+│       │   ├── MediaCard.tsx
+│       │   └── MediaUtilityPages.tsx
+│       └── lib/api.ts             # API client and React Query hooks
+├── android/                       # Kotlin Android TV/mobile client
+├── docs/
+│   ├── assets/                    # README product visuals
+│   ├── ARCHITECTURE.md
+│   ├── DEPLOYMENT.md
+│   ├── MEDIA_CENTER.md
+│   ├── RELEASING.md
+│   └── SETUP.md
+├── docker-compose.yml
+└── .env.example
+```
 
-- **JWT Authentication** — Short-lived access tokens with [refresh token rotation](docs/ARCHITECTURE.md#authentication-flow)
-- **User Authorization** — Optional [`AUTH_USERS`](docs/SETUP.md#-advanced-features) whitelist
-- **Rate Limiting** — SlowAPI middleware on all endpoints
-- **CORS Protection** — Restricted to configured origins
-- **Input Validation** — Pydantic schemas prevent injection attacks
-- **Security Headers** — Standard headers on all responses
+## Verification
 
----
+The current implementation has been checked with:
 
-## 📚 Documentation
+```bash
+cd backend && pytest -q && python3 -m compileall -q app
+cd ../web && npx tsc --noEmit && npm run build && npm run lint
+```
 
-| Guide                                    | Description                                                           |
-| :--------------------------------------- | :-------------------------------------------------------------------- |
-| **[Setup & Usage](docs/SETUP.md)**       | How the app works, bot commands, login methods, and troubleshooting   |
-| **[Deployment](docs/DEPLOYMENT.md)**     | Docker, VPS, Railway, Render, and CapRover deployment                 |
-| **[Architecture](docs/ARCHITECTURE.md)** | Technical deep-dive: streaming engine, API endpoints, database models |
-| **[Releasing](docs/RELEASING.md)**       | APK build automation and signing via GitHub Actions                   |
+The Android source requires a configured Android SDK. If Gradle reports `SDK location not found`, define `ANDROID_HOME` or add `android/local.properties` with a valid `sdk.dir`.
 
----
+## Documentation
 
-## 🤝 Contributing
+| Guide | Purpose |
+| --- | --- |
+| [Media Center guide](docs/MEDIA_CENTER.md) | Media-center data model, API additions, automatic indexing, and database behavior |
+| [Setup guide](docs/SETUP.md) | Bot commands, authentication, and user setup |
+| [Deployment guide](docs/DEPLOYMENT.md) | Docker, VPS, Railway, Render, and CapRover deployment |
+| [Architecture guide](docs/ARCHITECTURE.md) | Streaming engine, security, and project architecture |
+| [Releasing guide](docs/RELEASING.md) | Android build and release workflow |
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+## Security and privacy
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+TelePlay applies authentication and user-scoped queries to media-center data. The server stores Telegram session state and application metadata, while source media remains in the configured Telegram storage channel. Use a strong JWT secret, protect the storage channel, restrict `AUTH_USERS` when appropriate, and place the deployment behind HTTPS for production use.
 
----
+## Contributing and license
 
-## 📄 License
+Contributions are welcome. Please open an issue or pull request with a focused description of the change and its verification steps.
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+TelePlay is distributed under the MIT License. See [LICENSE](LICENSE) for details.
 
-## 🙏 Acknowledgments
+## References
 
-- [PyroTGFork](https://github.com/TelegramPlayGround/pyrogram) — Telegram MTProto library
-- [FastAPI](https://fastapi.tiangolo.com/) — Modern Python web framework
-- [React](https://react.dev/) — Frontend library
-- [Jetpack Compose for TV](https://developer.android.com/training/tv/compose) — Android TV UI toolkit
-- [ExoPlayer](https://github.com/google/ExoPlayer) — Android media player
+[1]: https://core.telegram.org/api "Telegram API documentation"
+[2]: https://fastapi.tiangolo.com/ "FastAPI documentation"
+[3]: https://react.dev/ "React documentation"
+[4]: https://developer.android.com/training/tv/compose "Jetpack Compose for TV documentation"
