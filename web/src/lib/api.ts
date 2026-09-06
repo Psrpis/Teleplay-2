@@ -109,6 +109,15 @@ export interface MediaStats {
     recent_activity: TelegramFile[];
 }
 
+export interface MediaTag {
+    id: number;
+    name: string;
+    kind: 'series' | 'actor' | 'quality' | 'codec' | 'custom';
+    value?: string | null;
+    created_at: string;
+    file_count: number;
+}
+
 export interface FileListResponse {
     files: TelegramFile[];
     total: number;
@@ -447,6 +456,24 @@ export const useMediaSearch = (query: string, filters: Record<string, string | n
     enabled: query.trim().length > 0 || Object.values(filters).some((value) => value !== undefined),
     staleTime: 15000,
 });
+
+export const useMediaTags = (kind?: MediaTag['kind']) => useQuery<MediaTag[]>({
+    queryKey: ['media-tags', kind],
+    queryFn: async () => (await api.get<MediaTag[]>('/media/tags', { params: { kind } })).data,
+    staleTime: 60000,
+});
+
+export const useAutoTagLibrary = () => {
+    const queryClient = useQueryClient();
+    return useMutation<unknown, Error, number | undefined>({
+        mutationFn: async (limit = 5000) => (await api.post('/media/auto-tag', null, { params: { limit } })).data,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['media-tags'] });
+            queryClient.invalidateQueries({ queryKey: ['media-home'] });
+            queryClient.invalidateQueries({ queryKey: ['files'] });
+        },
+    });
+};
 
 export const useToggleFavorite = () => {
     const queryClient = useQueryClient();

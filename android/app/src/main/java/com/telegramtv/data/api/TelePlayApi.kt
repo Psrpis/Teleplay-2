@@ -199,6 +199,12 @@ interface TelePlayApi {
         @Body request: WatchedStateRequest
     ): Response<FileItem>
 
+    @GET("media/tags")
+    suspend fun getMediaTags(@Query("kind") kind: String? = null): Response<List<MediaTag>>
+
+    @POST("media/auto-tag")
+    suspend fun autoTagLibrary(@Query("limit") limit: Int = 5000): Response<List<AutoTagResponse>>
+
 
     // ============ TV-Specific Endpoints ============
 

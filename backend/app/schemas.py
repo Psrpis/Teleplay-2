@@ -234,10 +234,23 @@ class TagResponse(BaseModel):
     name: str
     created_at: datetime
     file_count: int = 0
+    kind: str = "custom"
+    value: Optional[str] = None
 
 
 class TagAssignment(BaseModel):
     tag_ids: List[int] = Field(default_factory=list, max_length=100)
+
+
+class AutoTagResponse(BaseModel):
+    file_id: int
+    series: Optional[str] = None
+    actors: List[str] = Field(default_factory=list)
+    season: Optional[int] = None
+    episode: Optional[int] = None
+    quality: Optional[str] = None
+    codec: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
 
 
 class MetadataUpdate(BaseModel):

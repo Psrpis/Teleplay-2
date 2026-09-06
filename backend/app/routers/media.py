@@ -38,11 +38,16 @@ from ..schemas import (
     TagAssignment,
     TagCreate,
     TagResponse,
+    AutoTagResponse,
     WatchedStateUpdate,
 )
-from ..services import add_urls_to_file, escape_like, fetch_continue_watching_files, fetch_recent_files
+from ..services import add_urls_to_file, auto_tag_file, escape_like, fetch_continue_watching_files, fetch_recent_files
 
 router = APIRouter(prefix="/media", tags=["Media Center"])
+
+
+def _tag_kind(name: str) -> str:
+    return name.split(":", 1)[0] if ":" in name else "custom"
 
 
 def _file_options():
@@ -343,10 +348,37 @@ async def replace_collection_items(collection_id: int, payload: CollectionItemUp
     return _collection_response(collection, files)
 
 
+@router.post("/files/{file_id}/auto-tag", response_model=AutoTagResponse)
+async def auto_tag_single_file(file_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    file = await _get_file(db, file_id, current_user.id)
+    facets = await auto_tag_file(db, file)
+    await db.commit()
+    return AutoTagResponse(file_id=file_id, **facets)
+
+
+@router.post("/auto-tag", response_model=list[AutoTagResponse])
+async def auto_tag_library(
+    limit: int = Query(500, ge=1, le=5000),
+    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(
+        select(File).where(File.user_id == current_user.id).options(*_file_options()).order_by(File.created_at.desc()).limit(limit)
+    )
+    files = result.scalars().unique().all()
+    output = []
+    for file in files:
+        output.append(AutoTagResponse(file_id=file.id, **(await auto_tag_file(db, file))))
+    await db.commit()
+    return output
+
+
 @router.get("/tags", response_model=list[TagResponse])
-async def list_tags(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def list_tags(
+    kind: Optional[str] = Query(None, pattern="^(series|actor|quality|codec|custom)$"),
+    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
+):
     result = await db.execute(select(Tag, func.count(FileTag.id)).outerjoin(FileTag).where(Tag.user_id == current_user.id).group_by(Tag.id).order_by(Tag.name))
-    return [TagResponse(id=tag.id, name=tag.name, created_at=tag.created_at, file_count=count) for tag, count in result.all()]
+    return [TagResponse(id=tag.id, name=tag.name.split(":", 1)[-1], created_at=tag.created_at, file_count=count, kind=_tag_kind(tag.name), value=tag.name) for tag, count in result.all() if not kind or _tag_kind(tag.name) == kind]
 
 
 @router.post("/tags", response_model=TagResponse, status_code=status.HTTP_201_CREATED)
@@ -359,7 +391,7 @@ async def create_tag(payload: TagCreate, db: AsyncSession = Depends(get_db), cur
         await db.rollback()
         raise HTTPException(status_code=409, detail="A tag with that name already exists")
     await db.refresh(tag)
-    return TagResponse(id=tag.id, name=tag.name, created_at=tag.created_at, file_count=0)
+    return TagResponse(id=tag.id, name=tag.name, created_at=tag.created_at, file_count=0, kind="custom", value=tag.name)
 
 
 @router.delete("/tags/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)

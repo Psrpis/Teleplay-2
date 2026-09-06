@@ -60,7 +60,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <p className="px-3 pb-2 pt-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-dark-600">Discover</p>
                     <NavItem icon={Home} label="Home" path="/" />
                     <NavItem icon={Film} label="Movies" path="/search?type=video" />
-                    <NavItem icon={Tv} label="Series" path="/search?type=series" />
+                    <NavItem icon={Tv} label="Series" path="/series" />
+                    <NavItem icon={Users} label="Actors" path="/actors" />
                     <NavItem icon={Heart} label="Favorites" path="/favorites" />
                     <p className="px-3 pb-2 pt-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-dark-600">Your library</p>
                     <NavItem icon={FolderOpen} label="My Files" path="/library" section="files" />

@@ -5,6 +5,7 @@ import FileBrowser from './components/FileBrowser';
 import GlobalContextMenu from './components/GlobalContextMenu';
 import MediaCenterPage from './components/MediaCenterPage';
 import { CollectionsPage, FavoritesPage, HistoryPage, SearchPage, SettingsPage, StatsPage } from './components/MediaUtilityPages';
+import TagBrowserPage from './components/TagBrowserPage';
 import logo from './assets/logo.png';
 
 function AuthCallback() {
@@ -318,6 +319,8 @@ function App() {
                 <Route path="/" element={<ProtectedRoute><MediaCenterPage /></ProtectedRoute>} />
                 <Route path="/library" element={<ProtectedRoute><FileBrowser /></ProtectedRoute>} />
                 <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
+                <Route path="/series" element={<ProtectedRoute><TagBrowserPage kind="series" /></ProtectedRoute>} />
+                <Route path="/actors" element={<ProtectedRoute><TagBrowserPage kind="actor" /></ProtectedRoute>} />
                 <Route path="/favorites" element={<ProtectedRoute><FavoritesPage /></ProtectedRoute>} />
                 <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
                 <Route path="/collections" element={<ProtectedRoute><CollectionsPage /></ProtectedRoute>} />

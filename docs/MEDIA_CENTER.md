@@ -8,6 +8,12 @@ The backend exposes favorites, completed watched state, current watch progress, 
 
 The Home dashboard is intentionally built from independently consumable sections. Empty sections are omitted, artwork falls back to the user’s Telegram thumbnail, and media without metadata remains fully playable. Favorite and watched-state controls are available from dashboard cards and the hero area. Progress state is represented as **Unwatched**, **In Progress**, or **Watched**.
 
+## Filename-based indexing
+
+Uploads are automatically indexed from common filename conventions. For example, a filename such as `The.Show.S02E05.oyuncuA.And.oyuncuB.1080p.HEVC.mkv` produces separate searchable facets for the **The Show** series, season 2 episode 5, actors **A** and **B**, 1080p quality, and HEVC codec. The original Telegram filename is never rewritten. Existing libraries can be backfilled with `POST /api/media/auto-tag`, or by using **Tag library now** on the Series or Actors page.
+
+Series and actors are deliberately stored as separate namespaced tags (`series:...`, `actor:...`) so the same actor can be found across unrelated series and films. The web navigation exposes dedicated **Series** and **Actors** pages; selecting a tag immediately filters all matching files, regardless of their physical folder.
+
 Android clients have additive Retrofit models and repository/API methods for the Home response, favorites, watched state, and media search. Existing TV and mobile navigation remain intact; the new endpoints are available for a first-class TV/mobile screen rollout without changing the existing streaming contract.
 
 ## Database behavior

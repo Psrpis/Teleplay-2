@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from app.models import File, WatchProgress
-from app.services import add_urls_to_file, parse_episode_reference, sanitize_filename
+from app.services import add_urls_to_file, parse_episode_reference, parse_filename_facets, sanitize_filename
 
 
 def make_file(duration=120):
@@ -37,6 +37,16 @@ def test_parse_episode_reference_supports_common_formats():
     }
     assert parse_episode_reference("Show Name - 2x03.mp4")["episode"] == 3
     assert parse_episode_reference("A Feature Film.mp4") is None
+
+
+def test_parse_filename_facets_separates_series_and_actors():
+    facets = parse_filename_facets("The.Show.S02E05.oyuncuA.And.oyuncuB.1080p.HEVC.mkv")
+    assert facets["series"] == "The Show"
+    assert facets["season"] == 2
+    assert facets["episode"] == 5
+    assert facets["actors"] == ["A", "B"]
+    assert facets["quality"] == "1080p"
+    assert facets["codec"] == "hevc"
 
 
 def test_file_serialization_exposes_unwatched_state():

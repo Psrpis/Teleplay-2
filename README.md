@@ -34,6 +34,7 @@ Stream and manage your Telegram files on any device — TV, Mobile, or Browser �
 - Responsive — works on desktop and mobile
 - Cinematic Home dashboard with Continue Watching, Favorites, Recently Added, and viewing history
 - User-scoped Favorites, Watched state, Collections, Tags, Search, Statistics, and Surprise Me
+- Automatic filename indexing for series, seasons, episodes, actors, quality, and codec, with dedicated Series and Actors browsing
 - Cached media metadata and artwork that never replaces the private Telegram-backed source file
 
 ### 📺 Android TV & Mobile App — [Installation Guide](docs/SETUP.md#32-android-tv--mobile)

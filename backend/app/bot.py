@@ -15,6 +15,7 @@ from .database import async_session
 from .models import User, File, Folder, LoginCode
 from .config import get_settings
 from .auth import create_access_token
+from .services import auto_tag_file
 
 settings = get_settings()
 
@@ -553,6 +554,8 @@ async def handle_file(client, message: Message):
                 **file_info
             )
             db.add(file)
+            await db.flush()
+            facets = await auto_tag_file(db, file)
             await db.commit()
             await db.refresh(file)
         
@@ -571,6 +574,13 @@ async def handle_file(client, message: Message):
             response += f"⏱ Duration: {format_duration(file_info['duration'])}\n"
         
         response += f"\n📁 Folder: / (root)\n\n"
+        if facets.get("series"):
+            response += f"🏷 Series: `{facets['series']}`\n"
+        if facets.get("actors"):
+            response += f"🎭 Actors: {', '.join(facets['actors'])}\n"
+        if facets.get("season"):
+            response += f"📺 Episode: S{facets['season']:02d}E{facets['episode']:02d}\n"
+        response += "\n"
         response += f"💡 Use `/file {file.id}` to manage this file"
         
         await status_msg.edit(
@@ -1283,4 +1293,3 @@ async def deletefolder_command(client, message: Message):
             ]
         ])
     )
-

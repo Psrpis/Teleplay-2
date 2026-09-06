@@ -106,6 +106,26 @@ class FilesRepository @Inject constructor(
         }
     }
 
+    suspend fun getMediaTags(kind: String? = null): Result<List<MediaTag>> {
+        return try {
+            val response = api.getMediaTags(kind)
+            if (response.isSuccessful) Result.success(response.body() ?: emptyList())
+            else Result.failure(Exception("Failed to load media tags"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun autoTagLibrary(limit: Int = 5000): Result<List<AutoTagResponse>> {
+        return try {
+            val response = api.autoTagLibrary(limit)
+            if (response.isSuccessful) Result.success(response.body() ?: emptyList())
+            else Result.failure(Exception("Failed to auto-tag library"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     /**
      * Rename or move a file.
      */

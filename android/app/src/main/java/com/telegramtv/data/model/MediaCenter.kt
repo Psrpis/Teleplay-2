@@ -27,3 +27,22 @@ data class MediaSearchResponse(
     @SerializedName("page") val page: Int = 1,
     @SerializedName("per_page") val perPage: Int = 30
 )
+
+data class MediaTag(
+    @SerializedName("id") val id: Int,
+    @SerializedName("name") val name: String,
+    @SerializedName("kind") val kind: String,
+    @SerializedName("value") val value: String? = null,
+    @SerializedName("file_count") val fileCount: Int = 0
+)
+
+data class AutoTagResponse(
+    @SerializedName("file_id") val fileId: Int,
+    @SerializedName("series") val series: String? = null,
+    @SerializedName("actors") val actors: List<String> = emptyList(),
+    @SerializedName("season") val season: Int? = null,
+    @SerializedName("episode") val episode: Int? = null,
+    @SerializedName("quality") val quality: String? = null,
+    @SerializedName("codec") val codec: String? = null,
+    @SerializedName("tags") val tags: List<String> = emptyList()
+)
