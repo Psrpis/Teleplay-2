@@ -171,6 +171,34 @@ interface TelePlayApi {
         @Body progress: WatchProgressUpdate
     ): Response<WatchProgress>
 
+    // ============ Media Center ==========
+
+    @GET("media/home")
+    suspend fun getMediaHome(@Query("limit") limit: Int = 20): Response<MediaHomeResponse>
+
+    @GET("media/search")
+    suspend fun searchMedia(
+        @Query("q") query: String,
+        @Query("file_type") fileType: String? = null,
+        @Query("watched") watched: String? = null,
+        @Query("favorite") favorite: Boolean? = null
+    ): Response<MediaSearchResponse>
+
+    @GET("media/favorites")
+    suspend fun getFavorites(): Response<List<FileItem>>
+
+    @POST("media/files/{id}/favorite")
+    suspend fun addFavorite(@Path("id") fileId: Int): Response<Unit>
+
+    @DELETE("media/files/{id}/favorite")
+    suspend fun removeFavorite(@Path("id") fileId: Int): Response<Unit>
+
+    @PUT("media/files/{id}/watched")
+    suspend fun setWatchedState(
+        @Path("id") fileId: Int,
+        @Body request: WatchedStateRequest
+    ): Response<FileItem>
+
 
     // ============ TV-Specific Endpoints ============
 

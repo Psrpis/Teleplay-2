@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { useCurrentUser, useLoginWithCode, useBotInfo, useGenerateLoginCode, useVerifyLoginCode } from './lib/api';
 import FileBrowser from './components/FileBrowser';
 import GlobalContextMenu from './components/GlobalContextMenu';
+import MediaCenterPage from './components/MediaCenterPage';
+import { CollectionsPage, FavoritesPage, HistoryPage, SearchPage, SettingsPage, StatsPage } from './components/MediaUtilityPages';
 import logo from './assets/logo.png';
 
 function AuthCallback() {
@@ -15,7 +17,6 @@ function AuthCallback() {
     useEffect(() => {
         if (token) {
             try {
-                console.log('Token received:', token.substring(0, 20) + '...');
                 localStorage.setItem('access_token', token);
                 const check = localStorage.getItem('access_token');
                 if (check === token) {
@@ -260,16 +261,10 @@ function BotLink({ code }: { code?: string }) {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-    const { data: user, isLoading, error } = useCurrentUser();
+    const { isLoading, error } = useCurrentUser();
     const token = localStorage.getItem('access_token');
 
-    console.log('[ProtectedRoute] Token exists:', !!token);
-    console.log('[ProtectedRoute] isLoading:', isLoading);
-    console.log('[ProtectedRoute] error:', error);
-    console.log('[ProtectedRoute] user:', user);
-
     if (!token) {
-        console.log('[ProtectedRoute] No token, redirecting to login');
         return <Navigate to="/login" replace />;
     }
 
@@ -285,7 +280,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     }
 
     if (error) {
-        console.log('[ProtectedRoute] Auth error, showing error message');
         // Show error instead of immediately redirecting
         return (
             <div className="min-h-screen flex items-center justify-center bg-dark-950 p-4">
@@ -321,11 +315,19 @@ function App() {
             <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/auth" element={<AuthCallback />} />
+                <Route path="/" element={<ProtectedRoute><MediaCenterPage /></ProtectedRoute>} />
+                <Route path="/library" element={<ProtectedRoute><FileBrowser /></ProtectedRoute>} />
+                <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
+                <Route path="/favorites" element={<ProtectedRoute><FavoritesPage /></ProtectedRoute>} />
+                <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
+                <Route path="/collections" element={<ProtectedRoute><CollectionsPage /></ProtectedRoute>} />
+                <Route path="/stats" element={<ProtectedRoute><StatsPage /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
                 <Route
                     path="/*"
                     element={
                         <ProtectedRoute>
-                            <FileBrowser />
+                            <Navigate to="/" replace />
                         </ProtectedRoute>
                     }
                 />

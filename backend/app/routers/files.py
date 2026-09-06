@@ -9,7 +9,7 @@ from sqlalchemy import select, func, delete
 from sqlalchemy.orm import selectinload
 
 from ..database import get_db
-from ..models import File, User, WatchProgress
+from ..models import File, User, WatchProgress, WatchHistory
 from ..schemas import FileResponse, FileListResponse, FileUpdate, WatchProgressUpdate
 from ..auth import get_current_user
 from ..telegram import delete_from_storage_channel
@@ -17,7 +17,8 @@ from ..config import get_settings
 from ..services import (
     escape_like, 
     sanitize_filename, 
-    add_urls_to_file, 
+    add_urls_to_file,
+    file_load_options,
     fetch_recent_files, 
     fetch_continue_watching_files
 )
@@ -37,7 +38,7 @@ async def list_files(
     current_user: User = Depends(get_current_user),
 ):
     """List user's files with optional filtering."""
-    query = select(File).where(File.user_id == current_user.id).options(selectinload(File.watch_progress))
+    query = select(File).where(File.user_id == current_user.id).options(*file_load_options())
     
     
     # Apply filters
@@ -129,7 +130,7 @@ async def get_file(
 ):
     """Get a specific file by ID."""
     result = await db.execute(
-        select(File).where(File.id == file_id, File.user_id == current_user.id).options(selectinload(File.watch_progress))
+        select(File).where(File.id == file_id, File.user_id == current_user.id).options(*file_load_options())
     )
     file = result.scalar_one_or_none()
     
@@ -165,7 +166,7 @@ async def update_file(
     
     # Re-fetch with relationships
     result = await db.execute(
-        select(File).where(File.id == file_id).options(selectinload(File.watch_progress))
+        select(File).where(File.id == file_id).options(*file_load_options())
     )
     file = result.scalar_one()
     
@@ -263,7 +264,18 @@ async def update_progress(
         watch_progress.position = progress.position
         if progress.duration:
              watch_progress.duration = int(progress.duration)
-        
+
+    effective_duration = watch_progress.duration or file.duration
+    if effective_duration and progress.position >= int(effective_duration * 0.95):
+        watch_progress.completed = True
+        watch_progress.position = int(effective_duration)
+        db.add(WatchHistory(
+            user_id=current_user.id,
+            file_id=file_id,
+            position=watch_progress.position,
+            duration=effective_duration,
+        ))
+
     await db.commit()
     await db.refresh(watch_progress)
     return watch_progress
@@ -302,7 +314,7 @@ async def share_file(
 ):
     """Generate a permanent public link for the file."""
     result = await db.execute(
-        select(File).where(File.id == file_id, File.user_id == current_user.id).options(selectinload(File.watch_progress))
+        select(File).where(File.id == file_id, File.user_id == current_user.id).options(*file_load_options())
     )
     file = result.scalar_one_or_none()
     
@@ -317,7 +329,7 @@ async def share_file(
     
     # Re-fetch with relationships
     result = await db.execute(
-        select(File).where(File.id == file_id).options(selectinload(File.watch_progress))
+        select(File).where(File.id == file_id).options(*file_load_options())
     )
     file = result.scalar_one()
     
@@ -332,7 +344,7 @@ async def revoke_share(
 ):
     """Revoke the public link for the file."""
     result = await db.execute(
-        select(File).where(File.id == file_id, File.user_id == current_user.id).options(selectinload(File.watch_progress))
+        select(File).where(File.id == file_id, File.user_id == current_user.id).options(*file_load_options())
     )
     file = result.scalar_one_or_none()
     
@@ -345,7 +357,7 @@ async def revoke_share(
     
     # Re-fetch with relationships
     result = await db.execute(
-        select(File).where(File.id == file_id).options(selectinload(File.watch_progress))
+        select(File).where(File.id == file_id).options(*file_load_options())
     )
     file = result.scalar_one()
     

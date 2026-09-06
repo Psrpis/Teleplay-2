@@ -13,7 +13,8 @@ from ..auth import get_current_user
 from ..config import get_settings
 from ..services import (
     escape_like, 
-    add_urls_to_file, 
+    add_urls_to_file,
+    file_load_options,
     fetch_recent_files, 
     fetch_continue_watching_files
 )
@@ -99,7 +100,7 @@ async def tv_search(
             File.user_id == current_user.id,
             File.file_name.ilike(f"%{escape_like(q)}%", escape="\\")
         )
-        .options(selectinload(File.watch_progress))
+        .options(*file_load_options())
         .order_by(desc(File.created_at))
         .limit(limit)
     )
@@ -165,7 +166,7 @@ async def tv_folder_detail(
     files_result = await db.execute(
         select(File)
         .where(File.user_id == current_user.id, File.folder_id == folder_id)
-        .options(selectinload(File.watch_progress))
+        .options(*file_load_options())
         .order_by(File.file_name)
     )
     files = files_result.scalars().all()

@@ -28,7 +28,11 @@ data class FileItem(
     @SerializedName("updated_at") val updatedAt: String,
     // Watch progress (optional, returned in TV browse responses)
     @SerializedName("progress") val watchProgress: Int? = null,
-    @SerializedName("progress_updated") val progressUpdated: String? = null
+    @SerializedName("progress_updated") val progressUpdated: String? = null,
+    @SerializedName("progress_percent") val progressPercentFromServer: Float? = null,
+    @SerializedName("watched_state") val watchedState: String? = null,
+    @SerializedName("is_favorite") val isFavorite: Boolean = false,
+    @SerializedName("tags") val tags: List<String> = emptyList()
 ) {
     /**
      * Human-readable file size (e.g., "1.5 GB").
@@ -95,6 +99,7 @@ data class FileItem(
      */
     val progressPercent: Float
         get() {
+            progressPercentFromServer?.let { return it }
             val prog = watchProgress ?: return 0f
             val dur = duration ?: return 0f
             if (dur <= 0.0) return 0f

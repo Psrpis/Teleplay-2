@@ -96,6 +96,12 @@ class FileResponse(FileBase):
     public_hash: Optional[str] = None
     public_stream_url: Optional[str] = None
     last_pos: int = 0
+    progress_percent: float = 0
+    watched_state: str = "unwatched"
+    is_favorite: bool = False
+    last_watched: Optional[datetime] = None
+    metadata: Optional[dict] = None
+    tags: List[str] = Field(default_factory=list)
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -169,6 +175,93 @@ class BotInfoResponse(BaseModel):
     username: str
     name: Optional[str] = None
     server_version: str = "1.0.0"
+
+
+# ============== Media Center Schemas ==============
+
+class FavoriteResponse(BaseModel):
+    file_id: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WatchedStateUpdate(BaseModel):
+    watched: bool
+
+
+class HistoryResponse(BaseModel):
+    id: int
+    file_id: int
+    watched_at: datetime
+    position: Optional[int] = None
+    duration: Optional[int] = None
+    file: Optional[FileResponse] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CollectionCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    description: Optional[str] = Field(default=None, max_length=500)
+
+
+class CollectionUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    description: Optional[str] = Field(default=None, max_length=500)
+
+
+class CollectionItemUpdate(BaseModel):
+    file_ids: List[int] = Field(default_factory=list, max_length=500)
+
+
+class CollectionResponse(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    item_count: int = 0
+    files: List[FileResponse] = Field(default_factory=list)
+
+
+class TagCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=80)
+
+
+class TagResponse(BaseModel):
+    id: int
+    name: str
+    created_at: datetime
+    file_count: int = 0
+
+
+class TagAssignment(BaseModel):
+    tag_ids: List[int] = Field(default_factory=list, max_length=100)
+
+
+class MetadataUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, max_length=500)
+    original_title: Optional[str] = Field(default=None, max_length=500)
+    overview: Optional[str] = Field(default=None, max_length=10000)
+    year: Optional[int] = Field(default=None, ge=1800, le=2200)
+    runtime: Optional[int] = Field(default=None, ge=0, le=100000)
+    genres: List[str] = Field(default_factory=list, max_length=30)
+    rating: Optional[float] = Field(default=None, ge=0, le=10)
+    poster_url: Optional[str] = Field(default=None, max_length=1000)
+    backdrop_url: Optional[str] = Field(default=None, max_length=1000)
+    cast: List[str] = Field(default_factory=list, max_length=100)
+    directors: List[str] = Field(default_factory=list, max_length=20)
+    external_id: Optional[str] = Field(default=None, max_length=120)
+    media_type: Optional[str] = Field(default=None, max_length=30)
+    season: Optional[int] = Field(default=None, ge=0, le=1000)
+    episode: Optional[int] = Field(default=None, ge=0, le=10000)
+    provider: Optional[str] = Field(default=None, max_length=50)
+
+
+class PreferenceUpdate(BaseModel):
+    key: str = Field(..., min_length=1, max_length=100)
+    value: str = Field(..., max_length=10000)
 
 
 # Resolve forward references

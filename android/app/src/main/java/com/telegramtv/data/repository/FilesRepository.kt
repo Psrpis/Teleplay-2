@@ -66,6 +66,46 @@ class FilesRepository @Inject constructor(
         }
     }
 
+    suspend fun getMediaHome(limit: Int = 20): Result<MediaHomeResponse> {
+        return try {
+            val response = api.getMediaHome(limit)
+            if (response.isSuccessful) Result.success(response.body()!!)
+            else Result.failure(Exception("Failed to load media home: ${response.code()}"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getFavorites(): Result<List<FileItem>> {
+        return try {
+            val response = api.getFavorites()
+            if (response.isSuccessful) Result.success(response.body() ?: emptyList())
+            else Result.failure(Exception("Failed to load favorites"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun setFavorite(fileId: Int, favorite: Boolean): Result<Unit> {
+        return try {
+            val response = if (favorite) api.addFavorite(fileId) else api.removeFavorite(fileId)
+            if (response.isSuccessful) Result.success(Unit)
+            else Result.failure(Exception("Failed to update favorite"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun setWatched(fileId: Int, watched: Boolean): Result<FileItem> {
+        return try {
+            val response = api.setWatchedState(fileId, WatchedStateRequest(watched))
+            if (response.isSuccessful) Result.success(response.body()!!)
+            else Result.failure(Exception("Failed to update watched state"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     /**
      * Rename or move a file.
      */

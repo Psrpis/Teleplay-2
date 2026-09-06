@@ -32,6 +32,9 @@ Stream and manage your Telegram files on any device — TV, Mobile, or Browser �
 - Inline video/audio player with seeking
 - Three login methods (direct link, login code, [remote authorization](docs/SETUP.md#31-web-interface))
 - Responsive — works on desktop and mobile
+- Cinematic Home dashboard with Continue Watching, Favorites, Recently Added, and viewing history
+- User-scoped Favorites, Watched state, Collections, Tags, Search, Statistics, and Surprise Me
+- Cached media metadata and artwork that never replaces the private Telegram-backed source file
 
 ### 📺 Android TV & Mobile App — [Installation Guide](docs/SETUP.md#32-android-tv--mobile)
 
@@ -41,6 +44,7 @@ Stream and manage your Telegram files on any device — TV, Mobile, or Browser �
 - Download files for offline playback (Mobile)
 - Picture-in-Picture mode (Mobile)
 - Watch progress automatically synced with the server
+- Additive media-center API models for Home, Favorites, Search, and Watched state
 
 ### ⚡ Platform — [Architecture Overview](docs/ARCHITECTURE.md)
 
@@ -217,6 +221,8 @@ That's it! Your services are now running:
 | **Web**      | React 18, TypeScript, Vite                       |
 | **Android**  | Kotlin, Jetpack Compose for TV, ExoPlayer        |
 | **Deploy**   | Docker, Docker Compose, Nginx                    |
+
+> **Media-center implementation details:** see the [Media Center guide](docs/MEDIA_CENTER.md) for API additions, database behavior, setup, and verification commands.
 
 ---
 

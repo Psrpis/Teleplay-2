@@ -1,7 +1,7 @@
 /**
  * FileCard component - displays a single file in grid or list view
  */
-import { Play, MoreVertical, Film, Music, FileText, Image } from 'lucide-react';
+import { Play, MoreVertical, Film, Music, FileText, Image, Heart, Check } from 'lucide-react';
 import { TelegramFile, formatFileSize, formatDuration } from '../lib/api';
 import { useAppStore } from '../lib/store';
 
@@ -177,6 +177,9 @@ export default function FileCard({
                         {formatDuration(file.duration)}
                     </div>
                 )}
+
+                {file.is_favorite && <div className="absolute left-1.5 top-1.5 rounded-full bg-pink-500/80 p-1 text-white"><Heart className="h-3 w-3" fill="currentColor" /></div>}
+                {file.watched_state === 'watched' && <div className="absolute right-1.5 top-1.5 rounded-full bg-emerald-500/80 p-1 text-white" title="Watched"><Check className="h-3 w-3" /></div>}
 
                 {/* Play overlay for video/audio */}
                 {(file.file_type === 'video' || file.file_type === 'audio') && (

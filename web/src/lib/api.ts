@@ -46,6 +46,67 @@ export interface TelegramFile {
     last_pos?: number;
     public_hash?: string;
     public_stream_url?: string;
+    progress_percent?: number;
+    watched_state?: 'unwatched' | 'in_progress' | 'watched';
+    is_favorite?: boolean;
+    last_watched?: string | null;
+    metadata?: MediaMetadata | null;
+    tags?: string[];
+}
+
+export interface MediaMetadata {
+    title?: string | null;
+    original_title?: string | null;
+    overview?: string | null;
+    year?: number | null;
+    runtime?: number | null;
+    genres?: string[];
+    rating?: number | null;
+    poster_url?: string | null;
+    backdrop_url?: string | null;
+    cast?: string[];
+    directors?: string[];
+    external_id?: string | null;
+    media_type?: string | null;
+    season?: number | null;
+    episode?: number | null;
+    provider?: string | null;
+}
+
+export interface MediaHome {
+    hero: TelegramFile | null;
+    continue_watching: TelegramFile[];
+    favorites: TelegramFile[];
+    recently_added: TelegramFile[];
+    recently_watched: TelegramFile[];
+    collections: Collection[];
+}
+
+export interface Collection {
+    id: number;
+    name: string;
+    description?: string | null;
+    created_at: string;
+    updated_at: string;
+    item_count: number;
+    files?: TelegramFile[];
+}
+
+export interface HistoryEntry {
+    id: number;
+    file_id: number;
+    watched_at: string;
+    position?: number | null;
+    duration?: number | null;
+    file?: TelegramFile | null;
+}
+
+export interface MediaStats {
+    total_watched: number;
+    movies_watched: number;
+    episodes_watched: number;
+    total_watch_time: number;
+    recent_activity: TelegramFile[];
 }
 
 export interface FileListResponse {
@@ -188,7 +249,6 @@ api.interceptors.response.use(
                 isRefreshing = false;
             }
         } else if (error.response?.status === 429) {
-            console.log('[API] 429 Too Many Requests - rate limited');
             error.message = 'Too many requests. Please wait a moment and try again.';
         }
         
@@ -360,6 +420,107 @@ export const useContinueWatching = (limit = 20) => {
         },
     });
 };
+
+// ============== Media Center Hooks ==============
+
+export const useMediaHome = (limit = 20) => useQuery<MediaHome>({
+    queryKey: ['media-home', limit],
+    queryFn: async () => (await api.get<MediaHome>('/media/home', { params: { limit } })).data,
+    staleTime: 30000,
+});
+
+export const useFavorites = () => useQuery<TelegramFile[]>({
+    queryKey: ['favorites'],
+    queryFn: async () => (await api.get<TelegramFile[]>('/media/favorites')).data,
+    staleTime: 30000,
+});
+
+export const useHistory = (query = '') => useQuery<HistoryEntry[]>({
+    queryKey: ['history', query],
+    queryFn: async () => (await api.get<HistoryEntry[]>('/media/history', { params: { q: query || undefined } })).data,
+    staleTime: 30000,
+});
+
+export const useMediaSearch = (query: string, filters: Record<string, string | number | boolean | undefined> = {}) => useQuery<FileListResponse>({
+    queryKey: ['media-search', query, filters],
+    queryFn: async () => (await api.get<FileListResponse>('/media/search', { params: { q: query, ...filters } })).data,
+    enabled: query.trim().length > 0 || Object.values(filters).some((value) => value !== undefined),
+    staleTime: 15000,
+});
+
+export const useToggleFavorite = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ fileId, favorite }: { fileId: number; favorite: boolean }) => {
+            if (favorite) await api.post(`/media/files/${fileId}/favorite`);
+            else await api.delete(`/media/files/${fileId}/favorite`);
+            return favorite;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['favorites'] });
+            queryClient.invalidateQueries({ queryKey: ['media-home'] });
+            queryClient.invalidateQueries({ queryKey: ['files'] });
+            queryClient.invalidateQueries({ queryKey: ['file'] });
+        },
+    });
+};
+
+export const useSetWatched = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ fileId, watched }: { fileId: number; watched: boolean }) =>
+            (await api.put<TelegramFile>(`/media/files/${fileId}/watched`, { watched })).data,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['media-home'] });
+            queryClient.invalidateQueries({ queryKey: ['favorites'] });
+            queryClient.invalidateQueries({ queryKey: ['history'] });
+            queryClient.invalidateQueries({ queryKey: ['files'] });
+            queryClient.invalidateQueries({ queryKey: ['file'] });
+        },
+    });
+};
+
+export const useCollections = () => useQuery<Collection[]>({
+    queryKey: ['collections'],
+    queryFn: async () => (await api.get<Collection[]>('/media/collections')).data,
+    staleTime: 30000,
+});
+
+export const useCreateCollection = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (payload: { name: string; description?: string }) =>
+            (await api.post<Collection>('/media/collections', payload)).data,
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['collections'] }),
+    });
+};
+
+export const useDeleteHistory = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (entryId: number) => api.delete(`/media/history/${entryId}`),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['history'] }),
+    });
+};
+
+export const useClearHistory = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async () => api.delete('/media/history'),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['history'] }),
+    });
+};
+
+export const useMediaStats = () => useQuery<MediaStats>({
+    queryKey: ['media-stats'],
+    queryFn: async () => (await api.get<MediaStats>('/media/stats')).data,
+    staleTime: 60000,
+});
+
+export const useSurpriseMe = () => useMutation({
+    mutationFn: async (params: { file_type?: string; unwatched?: boolean; favorite?: boolean } = {}) =>
+        (await api.get<TelegramFile>('/media/surprise', { params })).data,
+});
 
 export const useStorageStats = () => {
     return useQuery<StorageStats>({
