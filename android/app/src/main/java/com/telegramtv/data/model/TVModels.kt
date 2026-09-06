@@ -12,6 +12,7 @@ import com.google.gson.annotations.SerializedName
 data class TVBrowseResponse(
     @SerializedName("continue_watching") val continueWatching: List<FileItem>,
     @SerializedName("recent") val recentFiles: List<FileItem>,
+    @SerializedName("favorites") val favorites: List<FileItem> = emptyList(),
     @SerializedName("folders") val folders: List<Folder>
 )
 

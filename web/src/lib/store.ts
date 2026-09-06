@@ -70,8 +70,8 @@ interface AppState {
     setSelectedFiles: (files: TelegramFile[]) => void;
 
     // Navigation Section
-    activeSection: 'files' | 'recent' | 'continue_watching';
-    setActiveSection: (section: 'files' | 'recent' | 'continue_watching') => void;
+    activeSection: 'files' | 'recent' | 'continue_watching' | 'history' | 'favorites';
+    setActiveSection: (section: 'files' | 'recent' | 'continue_watching' | 'history' | 'favorites') => void;
 
     // Toast Notifications
     toasts: Array<{ id: string; message: string; type: 'success' | 'error' | 'info' }>;
@@ -94,7 +94,7 @@ export const useAppStore = create<AppState>((set) => ({
 
     // Navigation Section
     activeSection: 'files',
-    setActiveSection: (section) => set({ activeSection: section, currentFolderId: null, breadcrumbs: [{ id: null, name: section === 'files' ? 'My Files' : section === 'recent' ? 'Recently Added' : 'Continue Watching' }] }),
+    setActiveSection: (section) => set({ activeSection: section, currentFolderId: null, breadcrumbs: [{ id: null, name: section === 'files' ? 'My Files' : section === 'recent' ? 'Recently Added' : section === 'continue_watching' ? 'Continue Watching' : section === 'history' ? 'Watch History' : 'Favorites' }] }),
 
     // Selection
     selectedFileIds: new Set(),

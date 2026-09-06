@@ -46,6 +46,7 @@ export interface TelegramFile {
     last_pos?: number;
     public_hash?: string;
     public_stream_url?: string;
+    is_favorite: boolean;
 }
 
 export interface FileListResponse {
@@ -358,6 +359,39 @@ export const useContinueWatching = (limit = 20) => {
              const { data } = await api.get<FileListResponse>('/files/continue-watching', { params: { limit } });
              return data;
         },
+    });
+};
+
+export const useWatchHistory = (limit = 50) => {
+    return useQuery<FileListResponse>({
+        queryKey: ['files', 'history', limit],
+        queryFn: async () => (await api.get<FileListResponse>('/files/history', { params: { limit } })).data,
+    });
+};
+
+export const useFavorites = (limit = 50) => {
+    return useQuery<FileListResponse>({
+        queryKey: ['files', 'favorites', limit],
+        queryFn: async () => (await api.get<FileListResponse>('/files/favorites', { params: { limit } })).data,
+    });
+};
+
+export const useClearWatchHistory = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async () => api.delete('/files/history'),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['files'] }),
+    });
+};
+
+export const useToggleFavorite = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ fileId, isFavorite }: { fileId: number; isFavorite: boolean }) => {
+            const method = isFavorite ? 'delete' : 'put';
+            return (await api.request<TelegramFile>({ method, url: `/files/${fileId}/favorite` })).data;
+        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['files'] }),
     });
 };
 

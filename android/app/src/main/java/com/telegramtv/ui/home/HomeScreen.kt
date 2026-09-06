@@ -124,6 +124,24 @@ fun HomeScreen(
                             }
                         }
 
+                        // Favorites section
+                        if (uiState.favorites.isNotEmpty()) {
+                            item {
+                                ContentSection(
+                                    title = "Favorites",
+                                    subtitle = "Saved for quick access",
+                                    icon = Icons.Default.Favorite
+                                ) {
+                                    ContentRow(
+                                        title = "",
+                                        files = uiState.favorites,
+                                        serverUrl = uiState.serverUrl,
+                                        onFileClick = onFileClick
+                                    )
+                                }
+                            }
+                        }
+
                         // Folders section
                         if (uiState.folders.isNotEmpty()) {
                             item {
@@ -144,6 +162,7 @@ fun HomeScreen(
                         // Empty state
                         if (uiState.continueWatching.isEmpty() && 
                             uiState.recentFiles.isEmpty() && 
+                            uiState.favorites.isEmpty() &&
                             uiState.folders.isEmpty()) {
                             item {
                                 ModernEmptyState()

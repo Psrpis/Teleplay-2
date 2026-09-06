@@ -25,6 +25,7 @@ class User(Base):
     folders: Mapped[List["Folder"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     files: Mapped[List["File"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     watch_progress: Mapped[List["WatchProgress"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    favorites: Mapped[List["Favorite"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class Folder(Base):
@@ -86,6 +87,7 @@ class File(Base):
     user: Mapped["User"] = relationship(back_populates="files")
     folder: Mapped[Optional["Folder"]] = relationship(back_populates="files")
     watch_progress: Mapped[List["WatchProgress"]] = relationship(back_populates="file", cascade="all, delete-orphan")
+    favorites: Mapped[List["Favorite"]] = relationship(back_populates="file", cascade="all, delete-orphan")
     
     # Indexes
     __table_args__ = (
@@ -113,6 +115,23 @@ class WatchProgress(Base):
     # Unique constraint
     __table_args__ = (
         Index("idx_watch_user_file", user_id, file_id, unique=True),
+    )
+
+
+class Favorite(Base):
+    """A file saved by a user for quick access."""
+    __tablename__ = "favorites"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    file_id: Mapped[int] = mapped_column(ForeignKey("files.id", ondelete="CASCADE"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User"] = relationship(back_populates="favorites")
+    file: Mapped["File"] = relationship(back_populates="favorites")
+
+    __table_args__ = (
+        Index("idx_favorite_user_file", user_id, file_id, unique=True),
     )
 
 

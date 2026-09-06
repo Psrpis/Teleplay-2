@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../lib/store';
-import { TelegramFile, Folder, api } from '../lib/api';
-import { Play, Download, Link, Edit, FolderInput, Trash2, Globe, ShieldOff, HardDriveDownload } from 'lucide-react';
+import { TelegramFile, Folder, api, useToggleFavorite } from '../lib/api';
+import { Play, Download, Link, Edit, FolderInput, Trash2, Globe, ShieldOff, HardDriveDownload, Heart } from 'lucide-react';
 
 export default function GlobalContextMenu() {
     const { activeContextMenu, setActiveContextMenu, setPreviewFile, setMoveItems, setMoveFiles, setDeleteConfirm, setRenameFile, setRenameFolder, selectedFileIds, selectedFiles } = useAppStore();
     const menuRef = useRef<HTMLDivElement>(null);
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const toggleFavoriteMutation = useToggleFavorite();
 
     // Close menu on escape
     useEffect(() => {
@@ -129,6 +130,15 @@ export default function GlobalContextMenu() {
         }
     };
 
+    const handleFavorite = async (file: TelegramFile) => {
+        try {
+            await toggleFavoriteMutation.mutateAsync({ fileId: file.id, isFavorite: file.is_favorite });
+            setActiveContextMenu(null);
+        } catch (error) {
+            console.error('Failed to update favorite:', error);
+        }
+    };
+
     // --- Render ---
 
     return (
@@ -185,6 +195,14 @@ export default function GlobalContextMenu() {
                                 >
                                     <Download className="w-4 h-4" />
                                     Download
+                                </button>
+                                <button
+                                    className="context-menu-item w-full text-left"
+                                    onClick={() => handleFavorite(activeContextMenu.item as TelegramFile)}
+                                    disabled={toggleFavoriteMutation.isPending}
+                                >
+                                    <Heart className={`w-4 h-4 ${(activeContextMenu.item as TelegramFile).is_favorite ? 'fill-red-400 text-red-400' : ''}`} />
+                                    {(activeContextMenu.item as TelegramFile).is_favorite ? 'Remove from Favorites' : 'Add to Favorites'}
                                 </button>
                                 
                                 <hr className="border-white/[0.08] my-1" />

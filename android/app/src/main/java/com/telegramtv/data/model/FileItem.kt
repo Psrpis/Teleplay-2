@@ -26,6 +26,7 @@ data class FileItem(
     @SerializedName("public_hash") val publicHash: String?,
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("updated_at") val updatedAt: String,
+    @SerializedName("is_favorite") val isFavorite: Boolean = false,
     // Watch progress (optional, returned in TV browse responses)
     @SerializedName("progress") val watchProgress: Int? = null,
     @SerializedName("progress_updated") val progressUpdated: String? = null

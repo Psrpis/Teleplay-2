@@ -9,7 +9,7 @@ from sqlalchemy import select, func, delete
 from sqlalchemy.orm import selectinload
 
 from ..database import get_db
-from ..models import File, User, WatchProgress
+from ..models import Favorite, File, User, WatchProgress
 from ..schemas import FileResponse, FileListResponse, FileUpdate, WatchProgressUpdate
 from ..auth import get_current_user
 from ..telegram import delete_from_storage_channel
@@ -37,7 +37,7 @@ async def list_files(
     current_user: User = Depends(get_current_user),
 ):
     """List user's files with optional filtering."""
-    query = select(File).where(File.user_id == current_user.id).options(selectinload(File.watch_progress))
+    query = select(File).where(File.user_id == current_user.id).options(selectinload(File.watch_progress), selectinload(File.favorites))
     
     
     # Apply filters
@@ -105,6 +105,55 @@ async def get_continue_watching(
     )
 
 
+@router.get("/history", response_model=FileListResponse)
+async def get_watch_history(
+    limit: int = Query(50, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get all watched media, most recently watched first."""
+    result = await db.execute(
+        select(File)
+        .join(WatchProgress, File.id == WatchProgress.file_id)
+        .where(File.user_id == current_user.id, WatchProgress.user_id == current_user.id)
+        .options(selectinload(File.watch_progress), selectinload(File.favorites))
+        .order_by(WatchProgress.updated_at.desc())
+        .limit(limit)
+    )
+    files = result.scalars().unique().all()
+    return FileListResponse(files=[FileResponse(**add_urls_to_file(f)) for f in files], total=len(files), page=1, per_page=limit)
+
+
+@router.delete("/history")
+async def clear_watch_history(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Clear the current user's watch history without removing media files."""
+    result = await db.execute(delete(WatchProgress).where(WatchProgress.user_id == current_user.id))
+    await db.commit()
+    return {"message": "Watch history cleared", "deleted": result.rowcount or 0}
+
+
+@router.get("/favorites", response_model=FileListResponse)
+async def get_favorites(
+    limit: int = Query(50, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get the user's favorite files, most recently saved first."""
+    result = await db.execute(
+        select(File)
+        .join(Favorite, File.id == Favorite.file_id)
+        .where(File.user_id == current_user.id, Favorite.user_id == current_user.id)
+        .options(selectinload(File.watch_progress), selectinload(File.favorites))
+        .order_by(Favorite.created_at.desc())
+        .limit(limit)
+    )
+    files = result.scalars().unique().all()
+    return FileListResponse(files=[FileResponse(**add_urls_to_file(f)) for f in files], total=len(files), page=1, per_page=limit)
+
+
 @router.get("/storage", response_model=dict)
 async def get_storage_stats(
     db: AsyncSession = Depends(get_db),
@@ -121,6 +170,72 @@ async def get_storage_stats(
     }
 
 
+@router.put("/{file_id}/favorite", response_model=FileResponse)
+async def add_favorite(
+    file_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Save a file to the current user's favorites."""
+    result = await db.execute(
+        select(File).where(File.id == file_id, File.user_id == current_user.id)
+        .options(selectinload(File.watch_progress), selectinload(File.favorites))
+    )
+    file = result.scalar_one_or_none()
+    if not file:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    if not any(favorite.user_id == current_user.id for favorite in file.favorites):
+        db.add(Favorite(user_id=current_user.id, file_id=file.id))
+        await db.commit()
+        result = await db.execute(
+            select(File).where(File.id == file_id)
+            .options(selectinload(File.watch_progress), selectinload(File.favorites))
+        )
+        file = result.scalar_one()
+    return FileResponse(**add_urls_to_file(file))
+
+
+@router.delete("/{file_id}/favorite", response_model=FileResponse)
+async def remove_favorite(
+    file_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Remove a file from the current user's favorites."""
+    result = await db.execute(
+        select(File).where(File.id == file_id, File.user_id == current_user.id)
+        .options(selectinload(File.watch_progress), selectinload(File.favorites))
+    )
+    file = result.scalar_one_or_none()
+    if not file:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    await db.execute(delete(Favorite).where(Favorite.user_id == current_user.id, Favorite.file_id == file_id))
+    await db.commit()
+    result = await db.execute(
+        select(File).where(File.id == file_id)
+        .options(selectinload(File.watch_progress), selectinload(File.favorites))
+    )
+    return FileResponse(**add_urls_to_file(result.scalar_one()))
+
+
+@router.delete("/{file_id}/progress")
+async def remove_progress(
+    file_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Remove one file from the watch history without deleting the file."""
+    result = await db.execute(
+        delete(WatchProgress).where(WatchProgress.file_id == file_id, WatchProgress.user_id == current_user.id)
+    )
+    await db.commit()
+    if not result.rowcount:
+        raise HTTPException(status_code=404, detail="Watch history entry not found")
+    return {"message": "Watch history entry removed"}
+
+
 @router.get("/{file_id}", response_model=FileResponse)
 async def get_file(
     file_id: int,
@@ -129,7 +244,7 @@ async def get_file(
 ):
     """Get a specific file by ID."""
     result = await db.execute(
-        select(File).where(File.id == file_id, File.user_id == current_user.id).options(selectinload(File.watch_progress))
+        select(File).where(File.id == file_id, File.user_id == current_user.id).options(selectinload(File.watch_progress), selectinload(File.favorites))
     )
     file = result.scalar_one_or_none()
     
@@ -165,7 +280,7 @@ async def update_file(
     
     # Re-fetch with relationships
     result = await db.execute(
-        select(File).where(File.id == file_id).options(selectinload(File.watch_progress))
+        select(File).where(File.id == file_id).options(selectinload(File.watch_progress), selectinload(File.favorites))
     )
     file = result.scalar_one()
     
@@ -256,13 +371,19 @@ async def update_progress(
             file_id=file_id,
             position=progress.position,
             duration=int(progress.duration) if progress.duration else None,
-            completed=False
+            completed=progress.completed
         )
         db.add(watch_progress)
     else:
         watch_progress.position = progress.position
         if progress.duration:
              watch_progress.duration = int(progress.duration)
+        watch_progress.completed = progress.completed
+
+    # Browsers do not always send an explicit completion event. Treat playback
+    # within the final 5% as complete so it leaves "Continue Watching".
+    if watch_progress.duration and watch_progress.position >= watch_progress.duration * 0.95:
+        watch_progress.completed = True
         
     await db.commit()
     await db.refresh(watch_progress)
@@ -302,7 +423,7 @@ async def share_file(
 ):
     """Generate a permanent public link for the file."""
     result = await db.execute(
-        select(File).where(File.id == file_id, File.user_id == current_user.id).options(selectinload(File.watch_progress))
+        select(File).where(File.id == file_id, File.user_id == current_user.id).options(selectinload(File.watch_progress), selectinload(File.favorites))
     )
     file = result.scalar_one_or_none()
     
@@ -317,7 +438,7 @@ async def share_file(
     
     # Re-fetch with relationships
     result = await db.execute(
-        select(File).where(File.id == file_id).options(selectinload(File.watch_progress))
+        select(File).where(File.id == file_id).options(selectinload(File.watch_progress), selectinload(File.favorites))
     )
     file = result.scalar_one()
     
@@ -332,7 +453,7 @@ async def revoke_share(
 ):
     """Revoke the public link for the file."""
     result = await db.execute(
-        select(File).where(File.id == file_id, File.user_id == current_user.id).options(selectinload(File.watch_progress))
+        select(File).where(File.id == file_id, File.user_id == current_user.id).options(selectinload(File.watch_progress), selectinload(File.favorites))
     )
     file = result.scalar_one_or_none()
     
@@ -345,7 +466,7 @@ async def revoke_share(
     
     # Re-fetch with relationships
     result = await db.execute(
-        select(File).where(File.id == file_id).options(selectinload(File.watch_progress))
+        select(File).where(File.id == file_id).options(selectinload(File.watch_progress), selectinload(File.favorites))
     )
     file = result.scalar_one()
     

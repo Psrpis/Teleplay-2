@@ -187,6 +187,20 @@ class FilesRepository @Inject constructor(
         }
     }
 
+    /** Get favorites for the TV home screen. */
+    suspend fun getFavorites(limit: Int = 20): Result<List<FileItem>> {
+        return try {
+            val response = api.getTVFavorites(limit)
+            if (response.isSuccessful) {
+                Result.success(response.body() ?: emptyList())
+            } else {
+                Result.failure(Exception("Failed to load favorites"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     /**
      * Search for TV.
      */

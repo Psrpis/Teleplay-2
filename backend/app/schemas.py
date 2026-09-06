@@ -96,6 +96,7 @@ class FileResponse(FileBase):
     public_hash: Optional[str] = None
     public_stream_url: Optional[str] = None
     last_pos: int = 0
+    is_favorite: bool = False
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -116,8 +117,9 @@ class WatchProgressBase(BaseModel):
 
 
 class WatchProgressUpdate(BaseModel):
-    position: int
-    duration: Optional[float] = None
+    position: int = Field(ge=0)
+    duration: Optional[float] = Field(default=None, gt=0)
+    completed: bool = False
 
 
 class WatchProgressResponse(WatchProgressBase):

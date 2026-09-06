@@ -59,6 +59,7 @@ def add_urls_to_file(file: File) -> dict:
         "stream_url": f"/api/stream/{file.id}",
         "thumbnail_url": f"/api/stream/{file.id}/thumbnail" if file.thumbnail_file_id else None,
         "last_pos": file.watch_progress[0].position if file.watch_progress else 0,
+        "is_favorite": bool(file.favorites),
     }
     
     if file.public_hash:
@@ -72,7 +73,7 @@ async def fetch_recent_files(db: AsyncSession, user_id: int, limit: int) -> List
     query = (
         select(File)
         .where(File.user_id == user_id)
-        .options(selectinload(File.watch_progress))
+        .options(selectinload(File.watch_progress), selectinload(File.favorites))
         .order_by(desc(File.created_at))
         .limit(limit)
     )
@@ -90,7 +91,7 @@ async def fetch_continue_watching_files(db: AsyncSession, user_id: int, limit: i
             WatchProgress.position > 0,
             WatchProgress.completed == False
         )
-        .options(selectinload(File.watch_progress))
+        .options(selectinload(File.watch_progress), selectinload(File.favorites))
         .order_by(desc(WatchProgress.updated_at))
         .limit(limit)
     )

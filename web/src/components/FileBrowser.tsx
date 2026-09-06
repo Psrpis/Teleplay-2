@@ -2,8 +2,8 @@
  * Main FileBrowser component - the core of the web interface
  */
 import { useEffect, useCallback, useRef, useState } from 'react';
-import { FolderPlus, Grid, List, Search, ChevronRight, Home, RefreshCw, Clipboard, ArrowUp, Film, Music, Image as ImageIcon, FileText, Menu } from 'lucide-react';
-import { useFiles, useFolders, useUpdateFile, useUpdateFolder, useDeleteFolder, useDeleteFiles, useMoveFiles, TelegramFile, Folder, useRecentFiles, useContinueWatching, useDeleteFolders, useMoveFolders } from '../lib/api';
+import { FolderPlus, Grid, List, Search, ChevronRight, Home, RefreshCw, Clipboard, ArrowUp, Film, Music, Image as ImageIcon, FileText, Menu, Trash2 } from 'lucide-react';
+import { useFiles, useFolders, useUpdateFile, useUpdateFolder, useDeleteFolder, useDeleteFiles, useMoveFiles, TelegramFile, Folder, useRecentFiles, useContinueWatching, useDeleteFolders, useMoveFolders, useFavorites, useWatchHistory, useClearWatchHistory } from '../lib/api';
 import { useAppStore } from '../lib/store';
 import FileCard from './FileCard';
 import FolderCard from './FolderCard';
@@ -62,6 +62,8 @@ export default function FileBrowser() {
     const { data: filesList, isLoading: filesLoading, refetch: refetchFiles } = useFiles(currentFolderId, fileTypeFilter || undefined, searchQuery || undefined, page);
     const { data: recentFiles, isLoading: recentLoading, refetch: refetchRecent } = useRecentFiles(50);
     const { data: cwFiles, isLoading: cwLoading, refetch: refetchCW } = useContinueWatching(50);
+    const { data: favoriteFiles, isLoading: favoritesLoading, refetch: refetchFavorites } = useFavorites(50);
+    const { data: historyFiles, isLoading: historyLoading, refetch: refetchHistory } = useWatchHistory(50);
     
 
     // For files section, accumulate files from all pages
@@ -86,6 +88,12 @@ export default function FileBrowser() {
     } else if (activeSection === 'continue_watching') {
         displayFiles = cwFiles?.files;
         isLoading = cwLoading;
+    } else if (activeSection === 'favorites') {
+        displayFiles = favoriteFiles?.files;
+        isLoading = favoritesLoading;
+    } else if (activeSection === 'history') {
+        displayFiles = historyFiles?.files;
+        isLoading = historyLoading;
     } else {
         displayFiles = allFiles;
         isLoading = filesLoading;
@@ -106,6 +114,7 @@ export default function FileBrowser() {
     const moveFilesMutation = useMoveFiles();
     const moveFoldersMutation = useMoveFolders();
     const updateFolderMutation = useUpdateFolder();
+    const clearWatchHistoryMutation = useClearWatchHistory();
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [isSelecting, setIsSelecting] = useState(false);
@@ -121,8 +130,22 @@ export default function FileBrowser() {
             refetchRecent();
         } else if (activeSection === 'continue_watching') {
             refetchCW();
+        } else if (activeSection === 'favorites') {
+            refetchFavorites();
+        } else if (activeSection === 'history') {
+            refetchHistory();
         }
-    }, [activeSection, refetchFiles, refetchFolders, refetchRecent, refetchCW]);
+    }, [activeSection, refetchFiles, refetchFolders, refetchRecent, refetchCW, refetchFavorites, refetchHistory]);
+
+    const handleClearHistory = async () => {
+        if (!window.confirm('Clear your entire watch history? Your media files will not be deleted.')) return;
+        try {
+            await clearWatchHistoryMutation.mutateAsync();
+            addToast('Watch history cleared', 'success');
+        } catch {
+            addToast('Failed to clear watch history', 'error');
+        }
+    };
 
     // Handle drag-drop file to folder
     const handleFileDrop = useCallback(async (fileId: number, folderId: number) => {
@@ -608,6 +631,16 @@ export default function FileBrowser() {
                             >
                                 <FolderPlus className="w-4 h-4" />
                                 <span className="hidden sm:inline">New Folder</span>
+                            </button>
+                        )}
+                        {activeSection === 'history' && (
+                            <button
+                                onClick={handleClearHistory}
+                                disabled={clearWatchHistoryMutation.isPending || !displayFiles?.length}
+                                className="ml-2 btn-secondary py-1.5 px-3 text-sm flex items-center gap-2 text-red-300 border-red-500/20 hover:bg-red-500/10 disabled:opacity-50"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                <span className="hidden sm:inline">Clear History</span>
                             </button>
                         )}
                     </div>

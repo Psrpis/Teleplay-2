@@ -8,7 +8,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
 
 from ..database import get_db
-from ..models import File, User, Folder, WatchProgress
+from ..models import Favorite, File, User, Folder, WatchProgress
 from ..auth import get_current_user
 from ..config import get_settings
 from ..services import (
@@ -37,6 +37,16 @@ async def tv_browse(
     
     # Get recent files
     recent_files = await fetch_recent_files(db, current_user.id, 20)
+
+    favorites_result = await db.execute(
+        select(File)
+        .join(Favorite, File.id == Favorite.file_id)
+        .where(Favorite.user_id == current_user.id)
+        .options(selectinload(File.watch_progress), selectinload(File.favorites))
+        .order_by(desc(Favorite.created_at))
+        .limit(20)
+    )
+    favorites = favorites_result.scalars().unique().all()
     
     # Get top-level folders
     folders_query = (
@@ -50,6 +60,7 @@ async def tv_browse(
     return {
         "continue_watching": [add_urls_to_file(f) for f in continue_watching],
         "recent": [add_urls_to_file(f) for f in recent_files],
+        "favorites": [add_urls_to_file(f) for f in favorites],
         "folders": [
             {
                 "id": f.id,
@@ -71,6 +82,24 @@ async def tv_continue_watching(
     """Get continue watching list for TV."""
     files = await fetch_continue_watching_files(db, current_user.id, limit)
     return [add_urls_to_file(f) for f in files]
+
+
+@router.get("/favorites")
+async def tv_favorites(
+    limit: int = Query(20, ge=1, le=50),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get the user's favorite media for TV clients."""
+    result = await db.execute(
+        select(File)
+        .join(Favorite, File.id == Favorite.file_id)
+        .where(Favorite.user_id == current_user.id)
+        .options(selectinload(File.watch_progress), selectinload(File.favorites))
+        .order_by(desc(Favorite.created_at))
+        .limit(limit)
+    )
+    return [add_urls_to_file(file) for file in result.scalars().unique().all()]
 
 
 @router.get("/recent")
@@ -99,7 +128,7 @@ async def tv_search(
             File.user_id == current_user.id,
             File.file_name.ilike(f"%{escape_like(q)}%", escape="\\")
         )
-        .options(selectinload(File.watch_progress))
+        .options(selectinload(File.watch_progress), selectinload(File.favorites))
         .order_by(desc(File.created_at))
         .limit(limit)
     )
@@ -165,7 +194,7 @@ async def tv_folder_detail(
     files_result = await db.execute(
         select(File)
         .where(File.user_id == current_user.id, File.folder_id == folder_id)
-        .options(selectinload(File.watch_progress))
+        .options(selectinload(File.watch_progress), selectinload(File.favorites))
         .order_by(File.file_name)
     )
     files = files_result.scalars().all()

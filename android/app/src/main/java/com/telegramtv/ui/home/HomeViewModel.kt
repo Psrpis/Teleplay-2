@@ -23,6 +23,7 @@ data class HomeUiState(
     val isLoading: Boolean = true,
     val continueWatching: List<FileItem> = emptyList(),
     val recentFiles: List<FileItem> = emptyList(),
+    val favorites: List<FileItem> = emptyList(),
     val folders: List<Folder> = emptyList(),
     val serverUrl: String = "",
     val error: String? = null
@@ -64,6 +65,7 @@ class HomeViewModel @Inject constructor(
                         isLoading = false,
                         continueWatching = browse.continueWatching,
                         recentFiles = browse.recentFiles,
+                        favorites = browse.favorites,
                         folders = browse.folders
                     )
                 },
@@ -87,6 +89,9 @@ class HomeViewModel @Inject constructor(
         val recentResult = filesRepository.getRecentFiles(20)
         val recentFiles = recentResult.getOrDefault(emptyList())
 
+        val favoritesResult = filesRepository.getFavorites(20)
+        val favorites = favoritesResult.getOrDefault(emptyList())
+
         // Load folders
         val foldersResult = foldersRepository.getFolders()
         val folders = foldersResult.getOrDefault(emptyList())
@@ -95,6 +100,7 @@ class HomeViewModel @Inject constructor(
             isLoading = false,
             continueWatching = continueWatching,
             recentFiles = recentFiles,
+            favorites = favorites,
             folders = folders,
             error = if (recentFiles.isEmpty() && folders.isEmpty()) {
                 "Failed to load content"

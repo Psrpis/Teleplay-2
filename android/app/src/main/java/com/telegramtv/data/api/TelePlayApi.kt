@@ -171,6 +171,12 @@ interface TelePlayApi {
         @Body progress: WatchProgressUpdate
     ): Response<WatchProgress>
 
+    /** Get files saved as favorites by the current user. */
+    @GET("files/favorites")
+    suspend fun getFavorites(
+        @Query("limit") limit: Int = 20
+    ): Response<PaginatedResponse<FileItem>>
+
 
     // ============ TV-Specific Endpoints ============
 
@@ -191,6 +197,12 @@ interface TelePlayApi {
      */
     @GET("tv/recent")
     suspend fun getRecentFiles(
+        @Query("limit") limit: Int = 20
+    ): Response<List<FileItem>>
+
+    /** Get favorites optimized for the TV home screen. */
+    @GET("tv/favorites")
+    suspend fun getTVFavorites(
         @Query("limit") limit: Int = 20
     ): Response<List<FileItem>>
 
