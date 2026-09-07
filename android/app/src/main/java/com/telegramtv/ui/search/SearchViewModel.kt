@@ -36,7 +36,6 @@ class SearchViewModel @Inject constructor(
     private val filesRepository: FilesRepository,
     private val foldersRepository: com.telegramtv.data.repository.FoldersRepository,
     private val settingsRepository: SettingsRepository,
-    private val authRepository: com.telegramtv.data.repository.AuthRepository,
     private val fileDownloader: com.telegramtv.download.FileDownloader
 ) : ViewModel() {
 
