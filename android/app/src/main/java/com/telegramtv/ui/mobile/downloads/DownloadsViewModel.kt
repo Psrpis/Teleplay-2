@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import com.telegramtv.download.DownloadStatus
 import com.telegramtv.download.DownloadTask
 import com.telegramtv.download.FileDownloader
-import com.telegramtv.data.repository.AuthRepository
 import com.telegramtv.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -47,7 +46,6 @@ class DownloadsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val fileDownloader: FileDownloader,
     private val settingsRepository: SettingsRepository,
-    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     val uiState: StateFlow<DownloadsUiState> = fileDownloader.tasks.map { tasksMap ->
@@ -75,12 +73,7 @@ class DownloadsViewModel @Inject constructor(
     fun startDownload(fileId: Int, fileName: String, mimeType: String? = null) {
         viewModelScope.launch {
             val serverUrl = settingsRepository.getServerUrl()
-            val token = authRepository.getAccessToken()
-            val url = if (token != null) {
-                "$serverUrl/api/stream/$fileId?token=$token"
-            } else {
-                "$serverUrl/api/stream/$fileId"
-            }
+            val url = "$serverUrl/api/stream/$fileId"
             fileDownloader.enqueue(fileId, fileName, url, mimeType)
         }
     }

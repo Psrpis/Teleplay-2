@@ -270,21 +270,19 @@ function MediaPlayerContent({ file, onClose, isMinimized, setMinimized }: MediaP
 
     const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-    const token = localStorage.getItem('access_token');
-
     const getAbsoluteUrl = (url: string) => {
         if (!url) return '';
         if (url.startsWith('http')) return url;
         return `${window.location.origin}${url}`;
     };
 
-    const relativeStreamUrl = `${file.stream_url}?token=${token}`;
+    const relativeStreamUrl = file.stream_url;
     const authorizedStreamUrl = getAbsoluteUrl(relativeStreamUrl);
     const externalUrl = publicUrl || authorizedStreamUrl;
     const vlcUrl = `vlc://${externalUrl}`;
 
     // Authorized Thumbnail URL
-    const relativeThumbnailUrl = file.thumbnail_url ? `${file.thumbnail_url}?token=${token}` : null;
+    const relativeThumbnailUrl = file.thumbnail_url;
     const authorizedThumbnailUrl = relativeThumbnailUrl ? getAbsoluteUrl(relativeThumbnailUrl) : null;
 
     // Common Media Element

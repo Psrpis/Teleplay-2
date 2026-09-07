@@ -174,13 +174,23 @@ async def media_search(
             metadata_joined = True
         query = query.where(MediaMetadata.year == year)
     if watched:
-        query = query.join(WatchProgress, WatchProgress.file_id == File.id).where(WatchProgress.user_id == current_user.id)
         if watched == "watched":
+            query = query.join(WatchProgress, WatchProgress.file_id == File.id).where(WatchProgress.user_id == current_user.id)
             query = query.where(WatchProgress.completed.is_(True))
         elif watched == "in_progress":
+            query = query.join(WatchProgress, WatchProgress.file_id == File.id).where(WatchProgress.user_id == current_user.id)
             query = query.where(WatchProgress.completed.is_(False), WatchProgress.position > 0)
         else:
-            query = query.where(or_(WatchProgress.completed.is_(False), WatchProgress.position == 0))
+            query = query.outerjoin(
+                WatchProgress,
+                (WatchProgress.file_id == File.id) & (WatchProgress.user_id == current_user.id),
+            ).where(
+                or_(
+                    WatchProgress.id.is_(None),
+                    WatchProgress.completed.is_(False),
+                    WatchProgress.position == 0,
+                )
+            )
     if sort == "title":
         query = query.order_by(File.file_name.asc())
     elif sort == "runtime":

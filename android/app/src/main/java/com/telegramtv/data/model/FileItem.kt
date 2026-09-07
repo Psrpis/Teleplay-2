@@ -24,6 +24,8 @@ data class FileItem(
     @SerializedName("height") val height: Int?,
     @SerializedName("thumbnail_file_id") val thumbnailFileId: String?,
     @SerializedName("public_hash") val publicHash: String?,
+    @SerializedName("stream_url") val streamUrl: String? = null,
+    @SerializedName("thumbnail_url") val thumbnailUrl: String? = null,
     @SerializedName("created_at") val createdAt: String,
     @SerializedName("updated_at") val updatedAt: String,
     // Watch progress (optional, returned in TV browse responses)

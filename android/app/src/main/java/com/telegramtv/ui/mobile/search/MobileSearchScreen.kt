@@ -237,7 +237,8 @@ fun SearchFileCard(
             ) {
                  coil.compose.AsyncImage(
                     model = coil.request.ImageRequest.Builder(LocalContext.current)
-                        .data("$serverUrl/api/stream/${file.id}/thumbnail")
+                        .data(file.thumbnailUrl?.let { if (it.startsWith("http")) it else "$serverUrl$it" }
+                            ?: "$serverUrl/api/stream/${file.id}/thumbnail")
                         .crossfade(true)
                         .build(),
                     contentDescription = null,

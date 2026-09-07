@@ -139,14 +139,18 @@ class DetailsViewModel @Inject constructor(
      * Get thumbnail URL.
      */
     fun getThumbnailUrl(): String {
-        return "${_uiState.value.serverUrl}/api/stream/$fileId/thumbnail"
+        val file = _uiState.value.file
+        return file?.thumbnailUrl?.let { if (it.startsWith("http")) it else "${_uiState.value.serverUrl}$it" }
+            ?: "${_uiState.value.serverUrl}/api/stream/$fileId/thumbnail"
     }
 
     /**
      * Get stream URL.
      */
     fun getStreamUrl(): String {
-        return "${_uiState.value.serverUrl}/api/stream/$fileId"
+        val file = _uiState.value.file
+        return file?.streamUrl?.let { if (it.startsWith("http")) it else "${_uiState.value.serverUrl}$it" }
+            ?: "${_uiState.value.serverUrl}/api/stream/$fileId"
     }
 
     /**

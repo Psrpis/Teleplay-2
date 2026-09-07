@@ -220,12 +220,8 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             val serverUrl = _uiState.value.serverUrl
             if (serverUrl.isEmpty()) return@launch
-            val token = authRepository.getAccessToken()
-            val downloadUrl = if (token != null) {
-                "$serverUrl/api/stream/${file.id}?token=$token"
-            } else {
-                "$serverUrl/api/stream/${file.id}"
-            }
+            val downloadUrl = file.streamUrl?.let { if (it.startsWith("http")) it else "$serverUrl$it" }
+                ?: "$serverUrl/api/stream/${file.id}"
             val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
             val clip = android.content.ClipData.newPlainText("Download Link", downloadUrl)
             clipboard.setPrimaryClip(clip)

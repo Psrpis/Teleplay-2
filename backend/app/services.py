@@ -9,6 +9,7 @@ from sqlalchemy import select, desc
 from sqlalchemy.orm import selectinload
 
 from .models import File, WatchProgress, Folder, FileTag, Tag, MediaMetadata
+from .auth import create_media_token
 
 
 def file_load_options():
@@ -155,6 +156,7 @@ def add_urls_to_file(file: File) -> dict:
     progress_duration = (progress.duration if progress else None) or file.duration
     progress_percent = round(min(100, (last_pos / progress_duration) * 100), 1) if progress_duration and last_pos else 0
     watched_state = "watched" if progress and progress.completed else ("in_progress" if progress_percent > 0 else "unwatched")
+    media_token = create_media_token(file.user_id, file.id)
     data = {
         "id": file.id,
         "user_id": file.user_id,
@@ -170,8 +172,8 @@ def add_urls_to_file(file: File) -> dict:
         "height": file.height,
         "created_at": file.created_at,
         "updated_at": file.updated_at,
-        "stream_url": f"/api/stream/{file.id}",
-        "thumbnail_url": f"/api/stream/{file.id}/thumbnail" if file.thumbnail_file_id else None,
+        "stream_url": f"/api/stream/{file.id}?token={media_token}",
+        "thumbnail_url": f"/api/stream/{file.id}/thumbnail?token={media_token}" if file.thumbnail_file_id else None,
         "last_pos": last_pos,
         "progress_percent": progress_percent,
         "watched_state": watched_state,

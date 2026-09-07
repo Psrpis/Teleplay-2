@@ -40,7 +40,8 @@ fun ContentRow(
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(files, key = { it.id }) { file ->
-                val thumbnailUrl = "$serverUrl/api/stream/${file.id}/thumbnail"
+                val thumbnailUrl = file.thumbnailUrl?.let { if (it.startsWith("http")) it else "$serverUrl$it" }
+                    ?: "$serverUrl/api/stream/${file.id}/thumbnail"
                 
                 if (useLargeCards) {
                     LargeMediaCard(

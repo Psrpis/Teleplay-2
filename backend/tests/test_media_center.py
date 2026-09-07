@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from app.models import File, WatchProgress
+from app.auth import create_media_token, verify_media_token
 from app.services import add_urls_to_file, parse_episode_reference, parse_filename_facets, sanitize_filename
 
 
@@ -62,3 +63,10 @@ def test_file_serialization_exposes_progress_state():
     serialized = add_urls_to_file(file)
     assert serialized["watched_state"] == "in_progress"
     assert serialized["progress_percent"] == 50
+
+
+def test_media_token_is_scoped_to_user_and_file():
+    token = create_media_token(user_id=3, file_id=7)
+    assert verify_media_token(token, user_id=3, file_id=7) is True
+    assert verify_media_token(token, user_id=3, file_id=8) is False
+    assert verify_media_token(token, user_id=4, file_id=7) is False

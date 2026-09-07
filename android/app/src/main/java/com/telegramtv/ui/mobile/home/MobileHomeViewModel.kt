@@ -319,12 +319,8 @@ class MobileHomeViewModel @Inject constructor(
     fun copyDownloadLink(file: FileItem) {
         viewModelScope.launch {
             val serverUrl = settingsRepository.getServerUrl()
-            val token = authRepository.getAccessToken()
-            val downloadUrl = if (token != null) {
-                "$serverUrl/api/stream/${file.id}?token=$token"
-            } else {
-                "$serverUrl/api/stream/${file.id}"
-            }
+            val downloadUrl = file.streamUrl?.let { if (it.startsWith("http")) it else "$serverUrl$it" }
+                ?: "$serverUrl/api/stream/${file.id}"
             copyToClipboard("Download Link", downloadUrl)
             Toast.makeText(context, "Download link copied to clipboard", Toast.LENGTH_SHORT).show()
         }

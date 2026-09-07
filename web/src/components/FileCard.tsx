@@ -44,10 +44,9 @@ export default function FileCard({
         onPlay();
     };
 
-    // Generate authenticated stream URL for thumbnail
-    const token = localStorage.getItem('access_token');
+    // The backend returns a short-lived file-scoped thumbnail URL.
     const authorizedThumbnailUrl = file.thumbnail_url
-        ? `${file.thumbnail_url}${file.thumbnail_url.includes('?') ? '&' : '?'}token=${token}`
+        ? (file.thumbnail_url.startsWith('http') ? file.thumbnail_url : `${window.location.origin}${file.thumbnail_url}`)
         : null;
 
     const getIcon = () => {

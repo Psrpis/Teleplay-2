@@ -97,7 +97,8 @@ fun SearchScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(uiState.results, key = { it.id }) { file ->
-                            val thumbnailUrl = "${uiState.serverUrl}/api/stream/${file.id}/thumbnail"
+                            val thumbnailUrl = file.thumbnailUrl?.let { if (it.startsWith("http")) it else "${uiState.serverUrl}$it" }
+                                ?: "${uiState.serverUrl}/api/stream/${file.id}/thumbnail"
                             MediaCard(
                                 file = file,
                                 thumbnailUrl = thumbnailUrl,

@@ -538,7 +538,8 @@ fun ContinueWatchingCard(file: FileItem, serverUrl: String, onClick: (Int) -> Un
         Box(modifier = Modifier.fillMaxSize()) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data("$serverUrl/api/stream/${file.id}/thumbnail")
+                    .data(file.thumbnailUrl?.let { if (it.startsWith("http")) it else "$serverUrl$it" }
+                        ?: "$serverUrl/api/stream/${file.id}/thumbnail")
                     .crossfade(true)
                     .build(),
                 contentDescription = null,
@@ -593,7 +594,8 @@ fun RecentFileCard(file: FileItem, serverUrl: String, onClick: (Int) -> Unit) {
         ) {
               AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data("$serverUrl/api/stream/${file.id}/thumbnail")
+                    .data(file.thumbnailUrl?.let { if (it.startsWith("http")) it else "$serverUrl$it" }
+                        ?: "$serverUrl/api/stream/${file.id}/thumbnail")
                     .crossfade(true)
                     .build(),
                 contentDescription = null,
@@ -721,7 +723,8 @@ fun FileCard(
                 } else {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data("$serverUrl/api/stream/${file.id}/thumbnail")
+                            .data(file.thumbnailUrl?.let { if (it.startsWith("http")) it else "$serverUrl$it" }
+                        ?: "$serverUrl/api/stream/${file.id}/thumbnail")
                             .crossfade(true)
                             .build(),
                         contentDescription = null,

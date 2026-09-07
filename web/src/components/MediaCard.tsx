@@ -11,8 +11,7 @@ function artworkFor(file: TelegramFile) {
     const source = file.metadata?.poster_url || file.thumbnail_url;
     if (!source) return null;
     if (source.startsWith('http')) return source;
-    const token = localStorage.getItem('access_token');
-    return `${source}${source.includes('?') ? '&' : '?'}token=${token || ''}`;
+    return `${window.location.origin}${source}`;
 }
 
 export default function MediaCard({ file, compact = false }: MediaCardProps) {

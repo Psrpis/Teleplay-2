@@ -160,7 +160,18 @@ async def update_file(
     if update_data.file_name is not None:
         file.file_name = sanitize_filename(update_data.file_name)
     if update_data.folder_id is not None:
-        file.folder_id = update_data.folder_id if update_data.folder_id != 0 else None
+        target_folder_id = update_data.folder_id if update_data.folder_id != 0 else None
+        if target_folder_id is not None:
+            from ..models import Folder
+            folder_result = await db.execute(
+                select(Folder).where(
+                    Folder.id == target_folder_id,
+                    Folder.user_id == current_user.id,
+                )
+            )
+            if folder_result.scalar_one_or_none() is None:
+                raise HTTPException(status_code=404, detail="Target folder not found")
+        file.folder_id = target_folder_id
     
     await db.commit()
     

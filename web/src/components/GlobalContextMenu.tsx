@@ -105,8 +105,7 @@ export default function GlobalContextMenu() {
         } catch (err) {
             console.error('Failed to create public link:', err);
         }
-        const token = localStorage.getItem('access_token');
-        const downloadUrl = `${api.defaults.baseURL}/stream/${file.id}?token=${token}`;
+        const downloadUrl = file.stream_url;
         return downloadUrl.startsWith('http')
             ? downloadUrl
             : `${window.location.protocol}//${window.location.host}${downloadUrl}`;

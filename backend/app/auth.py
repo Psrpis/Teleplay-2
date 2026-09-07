@@ -44,6 +44,31 @@ def create_refresh_token(telegram_id: int, version: int = 0) -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 
 
+def create_media_token(user_id: int, file_id: int, lifetime_seconds: int = 300) -> str:
+    """Create a short-lived token scoped to one user's one media file."""
+    expire = datetime.utcnow() + timedelta(seconds=lifetime_seconds)
+    payload = {
+        "uid": user_id,
+        "fid": file_id,
+        "exp": expire,
+        "type": "media",
+    }
+    return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
+
+
+def verify_media_token(token: str, user_id: int, file_id: int) -> bool:
+    """Validate a short-lived token for exactly one user/file pair."""
+    try:
+        payload = jwt.decode(token, settings.jwt_secret, algorithms=["HS256"])
+        return (
+            payload.get("type") == "media"
+            and int(payload.get("uid")) == user_id
+            and int(payload.get("fid")) == file_id
+        )
+    except (JWTError, TypeError, ValueError):
+        return False
+
+
 def verify_token_payload(token: str, token_type: str = "access") -> Optional[dict]:
     """Verify JWT token and return full payload if valid."""
     try:

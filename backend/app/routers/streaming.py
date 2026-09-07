@@ -12,7 +12,7 @@ from slowapi.util import get_remote_address
 
 from ..database import get_db
 from ..models import File, User
-from ..auth import get_current_user
+from ..auth import verify_media_token, verify_token_payload
 from .. import telegram
 from ..telegram import get_message_from_channel
 from ..streaming import stream_file as stream_file_generator
@@ -24,6 +24,36 @@ logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/stream", tags=["Streaming"])
+
+
+async def get_stream_user(file_id: int, request: Request, db: AsyncSession) -> User:
+    """Accept normal bearer auth or a five-minute token scoped to this file."""
+    authorization = request.headers.get("authorization", "")
+    bearer = authorization[7:] if authorization.lower().startswith("bearer ") else None
+    query_token = request.query_params.get("token")
+    if query_token and not bearer:
+        result = await db.execute(select(File.user_id).where(File.id == file_id))
+        owner_id = result.scalar_one_or_none()
+        if owner_id is None or not verify_media_token(query_token, owner_id, file_id):
+            raise HTTPException(status_code=401, detail="Invalid or expired media token")
+        user_result = await db.execute(select(User).where(User.id == owner_id))
+        user = user_result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    if not bearer:
+        raise HTTPException(status_code=401, detail="Missing authentication token")
+    payload = verify_token_payload(bearer, token_type="access")
+    telegram_id = int(payload["sub"]) if payload and payload.get("sub") else None
+    if not telegram_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    result = await db.execute(select(User).where(User.telegram_id == telegram_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    if payload.get("ver") is not None and payload["ver"] < user.auth_version:
+        raise HTTPException(status_code=401, detail="Session has been invalidated")
+    return user
 
 
 def parse_range_header(range_header: str, file_size: int) -> tuple[int, int]:
@@ -46,10 +76,10 @@ async def stream_file(
     file_id: int,
     request: Request,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
     download: int = Query(0, description="Set to 1 to force download"),
 ):
     """Stream file from Telegram with range request support for seeking."""
+    current_user = await get_stream_user(file_id, request, db)
     # Get file from database
     result = await db.execute(
         select(File).where(File.id == file_id, File.user_id == current_user.id)
@@ -116,10 +146,11 @@ async def stream_file(
 @router.get("/{file_id}/thumbnail")
 async def get_thumbnail(
     file_id: int,
+    request: Request,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
     """Get file thumbnail."""
+    current_user = await get_stream_user(file_id, request, db)
     # Get file from database
     result = await db.execute(
         select(File).where(File.id == file_id, File.user_id == current_user.id)
