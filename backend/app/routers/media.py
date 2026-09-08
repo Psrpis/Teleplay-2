@@ -27,6 +27,8 @@ from ..models import (
 )
 from ..schemas import (
     CollectionCreate,
+    CollectionBulkAddRequest,
+    CollectionBulkAddResponse,
     CollectionItemUpdate,
     CollectionResponse,
     CollectionUpdate,
@@ -356,6 +358,82 @@ async def replace_collection_items(collection_id: int, payload: CollectionItemUp
     await db.commit()
     await db.refresh(collection)
     return _collection_response(collection, files)
+
+
+@router.post("/collections/{collection_id}/items/bulk-add", response_model=CollectionBulkAddResponse)
+async def bulk_add_collection_items(
+    collection_id: int,
+    payload: CollectionBulkAddRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Add every matching private file without replacing existing collection items."""
+    collection_result = await db.execute(
+        select(Collection).where(
+            Collection.id == collection_id,
+            Collection.user_id == current_user.id,
+        )
+    )
+    collection = collection_result.scalar_one_or_none()
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+
+    query_text = payload.query.strip()
+    if not query_text:
+        raise HTTPException(status_code=422, detail="Search query cannot be empty")
+
+    needle = f"%{escape_like(query_text)}%"
+    files_result = await db.execute(
+        select(File)
+        .where(
+            File.user_id == current_user.id,
+            File.file_name.ilike(needle, escape="\\"),
+        )
+        .order_by(File.file_name.asc(), File.id.asc())
+        .options(*_file_options())
+    )
+    files = files_result.scalars().unique().all()
+    if not files:
+        refreshed = await db.execute(
+            select(Collection)
+            .where(Collection.id == collection_id)
+            .execution_options(populate_existing=True)
+            .options(selectinload(Collection.items).selectinload(CollectionItem.file).options(*_file_options()))
+        )
+        current = refreshed.scalar_one()
+        return CollectionBulkAddResponse(**_collection_response(current).model_dump(), added_count=0)
+
+    file_ids = [file.id for file in files]
+    existing_result = await db.execute(
+        select(CollectionItem.file_id).where(
+            CollectionItem.collection_id == collection_id,
+            CollectionItem.file_id.in_(file_ids),
+        )
+    )
+    existing_ids = set(existing_result.scalars().all())
+    max_position = await db.scalar(
+        select(func.max(CollectionItem.position)).where(CollectionItem.collection_id == collection_id)
+    )
+    next_position = (max_position if max_position is not None else -1) + 1
+    added_count = 0
+    for file in files:
+        if file.id in existing_ids:
+            continue
+        db.add(CollectionItem(collection_id=collection_id, file_id=file.id, position=next_position))
+        next_position += 1
+        added_count += 1
+
+    if added_count:
+        await db.commit()
+
+    refreshed = await db.execute(
+        select(Collection)
+        .where(Collection.id == collection_id)
+        .execution_options(populate_existing=True)
+        .options(selectinload(Collection.items).selectinload(CollectionItem.file).options(*_file_options()))
+    )
+    current = refreshed.scalar_one()
+    return CollectionBulkAddResponse(**_collection_response(current).model_dump(), added_count=added_count)
 
 
 @router.post("/files/{file_id}/auto-tag", response_model=AutoTagResponse)

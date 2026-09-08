@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BarChart3, CalendarDays, Clock3, FolderPlus, Menu, Search, Trash2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { useClearHistory, useCollections, useCreateCollection, useDeleteHistory, useFavorites, useHistory, useMediaSearch, useMediaStats, formatDuration } from '../lib/api';
+import { useBulkAddToCollection, useClearHistory, useCollections, useCreateCollection, useDeleteHistory, useFavorites, useHistory, useMediaSearch, useMediaStats, formatDuration } from '../lib/api';
 import Sidebar from './Sidebar';
 import MediaCard from './MediaCard';
 import Toasts from './Toasts';
@@ -40,7 +40,61 @@ export function CollectionsPage() {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [showForm, setShowForm] = useState(false);
-    return <Shell title="Collections" eyebrow="Curate your library"><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-3xl font-bold">Your collections</h2><p className="mt-2 text-sm text-dark-400">Group media independently from physical folders.</p></div><button onClick={() => setShowForm((value) => !value)} className="btn-primary inline-flex items-center gap-2"><FolderPlus className="h-4 w-4" /> New collection</button></div>{showForm && <form onSubmit={(event) => { event.preventDefault(); if (!name.trim()) return; create.mutate({ name: name.trim(), description }, { onSuccess: () => { setName(''); setDescription(''); setShowForm(false); } }); }} className="mt-6 max-w-xl rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5"><input value={name} onChange={(event) => setName(event.target.value)} className="input w-full" placeholder="Collection name" maxLength={120} /><input value={description} onChange={(event) => setDescription(event.target.value)} className="input mt-3 w-full" placeholder="Short description (optional)" maxLength={500} /><button className="btn-primary mt-4" disabled={create.isPending}>Create collection</button></form>}<div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{isLoading ? <p className="text-dark-400">Loading collections…</p> : data?.length ? data.map((collection) => <div key={collection.id} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5"><div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-500/15 text-primary-200"><FolderPlus className="h-5 w-5" /></div><h3 className="mt-5 text-lg font-semibold">{collection.name}</h3><p className="mt-1 text-sm text-dark-400">{collection.description || 'A personal collection'}</p><p className="mt-5 text-xs text-dark-500">{collection.item_count} items</p>{collection.files?.length ? <div className="no-scrollbar mt-4 flex gap-2 overflow-x-auto">{collection.files.slice(0, 4).map((file) => <MediaCard key={file.id} file={file} compact />)}</div> : null}</div>) : <div className="col-span-full rounded-2xl border border-dashed border-white/10 p-12 text-center text-dark-500">Create a collection for movie nights, favorites, or rewatch lists.</div>}</div></Shell>;
+
+    return <Shell title="Collections" eyebrow="Curate your library">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <h2 className="text-3xl font-bold">Your collections</h2>
+                <p className="mt-2 text-sm text-dark-400">Group media independently from physical folders.</p>
+            </div>
+            <button onClick={() => setShowForm((value) => !value)} className="btn-primary inline-flex items-center gap-2">
+                <FolderPlus className="h-4 w-4" /> New collection
+            </button>
+        </div>
+        {showForm && <form onSubmit={(event) => {
+            event.preventDefault();
+            if (!name.trim()) return;
+            create.mutate({ name: name.trim(), description }, { onSuccess: () => { setName(''); setDescription(''); setShowForm(false); } });
+        }} className="mt-6 max-w-xl rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+            <input value={name} onChange={(event) => setName(event.target.value)} className="input w-full" placeholder="Collection name" maxLength={120} />
+            <input value={description} onChange={(event) => setDescription(event.target.value)} className="input mt-3 w-full" placeholder="Short description (optional)" maxLength={500} />
+            <button className="btn-primary mt-4" disabled={create.isPending}>Create collection</button>
+        </form>}
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {isLoading ? <p className="text-dark-400">Loading collections…</p> : data?.length ? data.map((collection) => <CollectionCard key={collection.id} collection={collection} />) : <div className="col-span-full rounded-2xl border border-dashed border-white/10 p-12 text-center text-dark-500">Create a collection for movie nights, favorites, or rewatch lists.</div>}
+        </div>
+    </Shell>;
+}
+
+function CollectionCard({ collection }: { collection: import('../lib/api').Collection }) {
+    const bulkAdd = useBulkAddToCollection();
+    const [query, setQuery] = useState('');
+    const [message, setMessage] = useState<string | null>(null);
+
+    return <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-500/15 text-primary-200"><FolderPlus className="h-5 w-5" /></div>
+        <h3 className="mt-5 text-lg font-semibold">{collection.name}</h3>
+        <p className="mt-1 text-sm text-dark-400">{collection.description || 'A personal collection'}</p>
+        <p className="mt-5 text-xs text-dark-500">{collection.item_count} items</p>
+        <form onSubmit={(event) => {
+            event.preventDefault();
+            const trimmed = query.trim();
+            if (!trimmed || bulkAdd.isPending) return;
+            setMessage(null);
+            bulkAdd.mutate({ collectionId: collection.id, query: trimmed }, {
+                onSuccess: (result) => { setQuery(''); setMessage(`${result.added_count} ${result.added_count === 1 ? 'file' : 'files'} added`); },
+                onError: () => setMessage('Could not add matching files'),
+            });
+        }} className="mt-4 border-t border-white/[0.06] pt-4">
+            <label className="text-xs font-medium text-dark-400" htmlFor={`bulk-add-${collection.id}`}>Add files by filename</label>
+            <div className="mt-2 flex gap-2">
+                <input id={`bulk-add-${collection.id}`} value={query} onChange={(event) => setQuery(event.target.value)} className="input min-w-0 flex-1 text-sm" placeholder="e.g. S01E02 or oyuncuA" maxLength={200} />
+                <button type="submit" className="btn-secondary shrink-0 px-3 text-xs" disabled={bulkAdd.isPending || !query.trim()}>{bulkAdd.isPending ? 'Adding…' : 'Add matching files'}</button>
+            </div>
+            {message && <p className={`mt-2 text-xs ${message.startsWith('Could') ? 'text-red-300' : 'text-emerald-300'}`}>{message}</p>}
+        </form>
+        {collection.files?.length ? <div className="no-scrollbar mt-4 flex gap-2 overflow-x-auto">{collection.files.slice(0, 4).map((file) => <MediaCard key={file.id} file={file} compact />)}</div> : null}
+    </div>;
 }
 
 export function StatsPage() { const { data, isLoading } = useMediaStats(); return <Shell title="Statistics" eyebrow="Your media habits">{isLoading ? <p className="text-dark-400">Calculating your stats…</p> : data ? <><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[['Total watched', data.total_watched], ['Movies', data.movies_watched], ['Episodes', data.episodes_watched], ['Watch time', formatDuration(data.total_watch_time)]].map(([label, value]) => <div key={String(label)} className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-5"><p className="text-xs uppercase tracking-[0.16em] text-dark-500">{label}</p><p className="mt-3 text-3xl font-bold text-white">{value}</p></div>)}</div><section className="mt-10"><div className="flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary-300" /><h2 className="text-xl font-semibold">Recent activity</h2></div><div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">{data.recent_activity.map((file) => <MediaCard key={file.id} file={file} compact />)}</div></section></> : null}</Shell>; }

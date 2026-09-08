@@ -215,6 +215,10 @@ class CollectionItemUpdate(BaseModel):
     file_ids: List[int] = Field(default_factory=list, max_length=500)
 
 
+class CollectionBulkAddRequest(BaseModel):
+    query: str = Field(..., min_length=1, max_length=200)
+
+
 class CollectionResponse(BaseModel):
     id: int
     name: str
@@ -223,6 +227,10 @@ class CollectionResponse(BaseModel):
     updated_at: datetime
     item_count: int = 0
     files: List[FileResponse] = Field(default_factory=list)
+
+
+class CollectionBulkAddResponse(CollectionResponse):
+    added_count: int = 0
 
 
 class TagCreate(BaseModel):

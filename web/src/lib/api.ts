@@ -522,6 +522,19 @@ export const useCreateCollection = () => {
     });
 };
 
+export interface BulkAddCollectionResponse extends Collection {
+    added_count: number;
+}
+
+export const useBulkAddToCollection = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ collectionId, query }: { collectionId: number; query: string }) =>
+            (await api.post<BulkAddCollectionResponse>(`/media/collections/${collectionId}/items/bulk-add`, { query })).data,
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['collections'] }),
+    });
+};
+
 export const useDeleteHistory = () => {
     const queryClient = useQueryClient();
     return useMutation({
