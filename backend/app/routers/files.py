@@ -32,6 +32,7 @@ async def list_files(
     folder_id: Optional[int] = Query(None, description="Filter by folder ID (null for root)"),
     file_type: Optional[str] = Query(None, description="Filter by file type"),
     search: Optional[str] = Query(None, description="Search by filename"),
+    sort: str = Query("date_desc", pattern="^(name_asc|name_desc|date_asc|date_desc|duration_asc|duration_desc|size_asc|size_desc)$"),
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
@@ -57,8 +58,18 @@ async def list_files(
     count_query = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_query)).scalar()
     
-    # Apply pagination
-    query = query.order_by(File.created_at.desc())
+    # Apply the requested ordering after filters, before pagination.
+    sort_expressions = {
+        "name_asc": File.file_name.asc(),
+        "name_desc": File.file_name.desc(),
+        "date_asc": File.created_at.asc(),
+        "date_desc": File.created_at.desc(),
+        "duration_asc": File.duration.asc().nullslast(),
+        "duration_desc": File.duration.desc().nullslast(),
+        "size_asc": File.file_size.asc(),
+        "size_desc": File.file_size.desc(),
+    }
+    query = query.order_by(sort_expressions[sort], File.id.asc())
     query = query.offset((page - 1) * per_page).limit(per_page)
     
     result = await db.execute(query)

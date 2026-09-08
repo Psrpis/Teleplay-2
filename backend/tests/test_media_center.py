@@ -8,6 +8,7 @@ from app.models import File, WatchProgress
 from app.models import Collection, CollectionItem, User
 from app.auth import create_media_token, verify_media_token
 from app.routers.media import bulk_add_collection_items
+from app.routers.files import list_files
 from app.schemas import CollectionBulkAddRequest
 from app.services import add_urls_to_file, parse_episode_reference, parse_filename_facets, sanitize_filename
 
@@ -101,6 +102,34 @@ def test_bulk_add_collection_items_preserves_existing_and_skips_duplicates():
             assert response.added_count == 1
             assert response.item_count == 2
             assert {file.file_name for file in response.files} == {"Show.S01E01.mkv", "Show.S01E02.mkv"}
+
+        await engine.dispose()
+
+    asyncio.run(run_test())
+
+
+def test_file_list_supports_name_and_size_sorting():
+    async def run_test():
+        engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+        async with session_factory() as db:
+            user = User(id=4, telegram_id=4004)
+            db.add_all([
+                user,
+                File(id=21, user_id=4, file_id="b", file_unique_id="b", channel_message_id=21, file_name="Bravo.mkv", file_size=20, file_type="video"),
+                File(id=22, user_id=4, file_id="a", file_unique_id="a", channel_message_id=22, file_name="Alpha.mkv", file_size=10, file_type="video"),
+            ])
+            await db.commit()
+
+            common = {"folder_id": None, "file_type": None, "search": None, "page": 1, "per_page": 20, "db": db, "current_user": user}
+            by_name = await list_files(sort="name_asc", **common)
+            by_size = await list_files(sort="size_desc", **common)
+
+            assert [file.file_name for file in by_name.files] == ["Alpha.mkv", "Bravo.mkv"]
+            assert [file.file_name for file in by_size.files] == ["Bravo.mkv", "Alpha.mkv"]
 
         await engine.dispose()
 

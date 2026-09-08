@@ -2,8 +2,8 @@
  * Main FileBrowser component - the core of the web interface
  */
 import { useEffect, useCallback, useRef, useState } from 'react';
-import { FolderPlus, Grid, List, Search, ChevronRight, Home, RefreshCw, Clipboard, ArrowUp, Film, Music, Image as ImageIcon, FileText, Menu } from 'lucide-react';
-import { useFiles, useFolders, useUpdateFile, useUpdateFolder, useDeleteFolder, useDeleteFiles, useMoveFiles, TelegramFile, Folder, useRecentFiles, useContinueWatching, useDeleteFolders, useMoveFolders } from '../lib/api';
+import { FolderPlus, Grid, List, Search, ChevronRight, Home, RefreshCw, Clipboard, ArrowUp, Film, Music, Image as ImageIcon, FileText, Menu, ArrowDownUp } from 'lucide-react';
+import { FileSort, useFiles, useFolders, useUpdateFile, useUpdateFolder, useDeleteFolder, useDeleteFiles, useMoveFiles, TelegramFile, Folder, useRecentFiles, useContinueWatching, useDeleteFolders, useMoveFolders, usePreferences, useSetPreference } from '../lib/api';
 import { useAppStore } from '../lib/store';
 import FileCard from './FileCard';
 import FolderCard from './FolderCard';
@@ -13,6 +13,19 @@ import DeleteConfirmModal from './DeleteConfirmModal';
 import RenameModal from './RenameModal';
 import Sidebar from './Sidebar';
 import Toasts from './Toasts';
+
+const FILE_SORT_OPTIONS: Array<{ value: FileSort; label: string }> = [
+    { value: 'date_desc', label: 'Date added · Newest' },
+    { value: 'date_asc', label: 'Date added · Oldest' },
+    { value: 'name_asc', label: 'Name · A-Z' },
+    { value: 'name_desc', label: 'Name · Z-A' },
+    { value: 'duration_desc', label: 'Duration · Longest' },
+    { value: 'duration_asc', label: 'Duration · Shortest' },
+    { value: 'size_desc', label: 'Size · Largest' },
+    { value: 'size_asc', label: 'Size · Smallest' },
+];
+
+const isFileSort = (value: string): value is FileSort => FILE_SORT_OPTIONS.some((option) => option.value === value);
 
 export default function FileBrowser() {
     const {
@@ -57,9 +70,17 @@ export default function FileBrowser() {
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [allFiles, setAllFiles] = useState<TelegramFile[]>([]);
+    const [sort, setSort] = useState<FileSort>('date_desc');
+    const { data: preferences } = usePreferences();
+    const setPreference = useSetPreference();
+
+    useEffect(() => {
+        const savedSort = preferences?.file_sort;
+        if (savedSort && isFileSort(savedSort)) setSort(savedSort);
+    }, [preferences]);
 
     // Data Fetching
-    const { data: filesList, isLoading: filesLoading, refetch: refetchFiles } = useFiles(currentFolderId, fileTypeFilter || undefined, searchQuery || undefined, page);
+    const { data: filesList, isLoading: filesLoading, refetch: refetchFiles } = useFiles(currentFolderId, fileTypeFilter || undefined, searchQuery || undefined, page, sort);
     const { data: recentFiles, isLoading: recentLoading, refetch: refetchRecent } = useRecentFiles(50);
     const { data: cwFiles, isLoading: cwLoading, refetch: refetchCW } = useContinueWatching(50);
     
@@ -123,6 +144,14 @@ export default function FileBrowser() {
             refetchCW();
         }
     }, [activeSection, refetchFiles, refetchFolders, refetchRecent, refetchCW]);
+
+    const handleSortChange = (nextSort: FileSort) => {
+        setSort(nextSort);
+        setPage(1);
+        setAllFiles([]);
+        setHasMore(true);
+        setPreference.mutate({ key: 'file_sort', value: nextSort });
+    };
 
     // Handle drag-drop file to folder
     const handleFileDrop = useCallback(async (fileId: number, folderId: number) => {
@@ -461,7 +490,7 @@ export default function FileBrowser() {
         setPage(1);
         setAllFiles([]);
         setHasMore(true);
-    }, [currentFolderId, fileTypeFilter, searchQuery, activeSection]);
+    }, [currentFolderId, fileTypeFilter, searchQuery, activeSection, sort]);
 
     return (
         <div className="flex h-screen bg-dark-950 text-white selection:bg-primary-500/30 overflow-hidden">
@@ -517,6 +546,19 @@ export default function FileBrowser() {
 
                     {/* Right: Actions */}
                     <div className="flex items-center gap-2 sm:gap-3">
+                        {activeSection === 'files' && (
+                            <label className="hidden sm:flex items-center gap-2 rounded-lg border border-white/[0.06] bg-dark-800/50 px-2 text-dark-400" title="Sort files">
+                                <ArrowDownUp className="h-3.5 w-3.5" />
+                                <select
+                                    value={sort}
+                                    onChange={(event) => handleSortChange(event.target.value as FileSort)}
+                                    className="bg-transparent py-1.5 text-xs text-dark-200 outline-none [&>option]:bg-dark-800"
+                                    aria-label="Sort files"
+                                >
+                                    {FILE_SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                                </select>
+                            </label>
+                        )}
                          {/* Filter buttons with Icons */}
                         <div className="hidden md:flex items-center bg-dark-800/50 rounded-lg p-0.5 border border-white/[0.06] mr-2">
                              <button

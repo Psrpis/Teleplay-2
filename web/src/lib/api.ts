@@ -326,9 +326,11 @@ export const useVerifyLoginCode = () => {
 
 // ============== Files Hooks ==============
 
-export const useFiles = (folderId?: number | null, fileType?: string, search?: string, page = 1) => {
+export type FileSort = 'name_asc' | 'name_desc' | 'date_asc' | 'date_desc' | 'duration_asc' | 'duration_desc' | 'size_asc' | 'size_desc';
+
+export const useFiles = (folderId?: number | null, fileType?: string, search?: string, page = 1, sort: FileSort = 'date_desc') => {
     return useQuery({
-        queryKey: ['files', folderId, fileType, search, page],
+        queryKey: ['files', folderId, fileType, search, page, sort],
         queryFn: async () => {
             const params: Record<string, any> = {};
             if (folderId !== undefined) params.folder_id = folderId;
@@ -336,6 +338,7 @@ export const useFiles = (folderId?: number | null, fileType?: string, search?: s
             if (search) params.search = search;
             params.page = page;
             params.per_page = 50; // Load 50 files per page
+            params.sort = sort;
             const { data } = await api.get<FileListResponse>('/files', { params });
             return data;
         },
@@ -437,6 +440,21 @@ export const useMediaHome = (limit = 20) => useQuery<MediaHome>({
     queryFn: async () => (await api.get<MediaHome>('/media/home', { params: { limit } })).data,
     staleTime: 30000,
 });
+
+export const usePreferences = () => useQuery<Record<string, string>>({
+    queryKey: ['preferences'],
+    queryFn: async () => (await api.get<Record<string, string>>('/media/preferences')).data,
+    staleTime: 60000,
+});
+
+export const useSetPreference = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ key, value }: { key: string; value: string }) =>
+            (await api.put<{ key: string; value: string }>('/media/preferences', { key, value })).data,
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['preferences'] }),
+    });
+};
 
 export const useFavorites = () => useQuery<TelegramFile[]>({
     queryKey: ['favorites'],
