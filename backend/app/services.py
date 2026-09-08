@@ -12,6 +12,21 @@ from .models import File, WatchProgress, Folder, FileTag, Tag, MediaMetadata
 from .auth import create_media_token
 
 
+VIDEO_EXTENSIONS = (".mp4", ".mkv", ".mov", ".avi", ".webm", ".m4v", ".ts", ".wmv", ".flv")
+AUDIO_EXTENSIONS = (".mp3", ".flac", ".m4a", ".wav", ".ogg", ".opus", ".aac")
+
+
+def classify_media_type(mime_type: str | None, file_name: str | None) -> str:
+    """Classify Telegram media, including videos intentionally sent as documents."""
+    mime = (mime_type or "").lower()
+    name = (file_name or "").lower()
+    if mime.startswith("video/") or name.endswith(VIDEO_EXTENSIONS):
+        return "video"
+    if mime.startswith("audio/") or name.endswith(AUDIO_EXTENSIONS):
+        return "audio"
+    return "document"
+
+
 def file_load_options():
     """Reusable eager-load graph for API responses in async SQLAlchemy."""
     return (

@@ -15,7 +15,7 @@ from .database import async_session
 from .models import User, File, Folder, LoginCode
 from .config import get_settings
 from .auth import create_access_token
-from .services import auto_tag_file
+from .services import auto_tag_file, classify_media_type
 
 settings = get_settings()
 
@@ -519,7 +519,10 @@ async def handle_file(client, message: Message):
         file_type = "audio"
     elif message.document:
         media = message.document
-        file_type = "document"
+        file_type = classify_media_type(
+            getattr(media, "mime_type", None),
+            getattr(media, "file_name", None),
+        )
     elif message.photo:
         return await message.reply("❌ Photos are not supported yet.")
     else:
