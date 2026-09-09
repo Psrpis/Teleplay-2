@@ -47,6 +47,11 @@ class SettingsRepository @Inject constructor(
             ?: BuildConfig.DEFAULT_SERVER_URL.ifBlank { "http://10.0.2.2:8000" }
     }
 
+    /** Return only a URL explicitly saved by the user, without applying the development fallback. */
+    suspend fun getConfiguredServerUrl(): String? {
+        return context.settingsDataStore.data.first()[PreferencesKeys.SERVER_URL]
+    }
+
     /**
      * Set server URL.
      */
