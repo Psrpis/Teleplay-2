@@ -26,6 +26,9 @@ data class MobileHomeUiState(
     val files: List<FileItem> = emptyList(),
     val continueWatching: List<FileItem> = emptyList(),
     val recentFiles: List<FileItem> = emptyList(),
+    val favorites: List<FileItem> = emptyList(),
+    val recentlyWatched: List<FileItem> = emptyList(),
+    val collections: List<com.telegramtv.data.model.MediaCollection> = emptyList(),
     val serverUrl: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -99,9 +102,9 @@ class MobileHomeViewModel @Inject constructor(
                 val foldersResult = foldersRepository.getFolders(parentId = null)
                 val filesResult = filesRepository.getFiles(folderId = null)
                 
-                // Fetch extra home content
-                val continueResult = filesRepository.getContinueWatching()
-                val recentResult = filesRepository.getRecentFiles()
+                // Fetch the consolidated media-center dashboard so Android has the
+                // same sections as the Web client (hero, favorites, history, collections).
+                val mediaHomeResult = filesRepository.getMediaHome()
 
                 if (foldersResult.isSuccess && filesResult.isSuccess) {
                     val allFiles = filesResult.getOrNull()?.items ?: emptyList()
@@ -112,8 +115,11 @@ class MobileHomeViewModel @Inject constructor(
                         isLoading = false,
                         folders = foldersResult.getOrNull() ?: emptyList(),
                         files = rootFiles,
-                        continueWatching = continueResult.getOrNull() ?: emptyList(),
-                        recentFiles = recentResult.getOrNull() ?: emptyList()
+                        continueWatching = mediaHomeResult.getOrNull()?.continueWatching ?: emptyList(),
+                        recentFiles = mediaHomeResult.getOrNull()?.recentlyAdded ?: emptyList(),
+                        favorites = mediaHomeResult.getOrNull()?.favorites ?: emptyList(),
+                        recentlyWatched = mediaHomeResult.getOrNull()?.recentlyWatched ?: emptyList(),
+                        collections = mediaHomeResult.getOrNull()?.collections ?: emptyList()
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(

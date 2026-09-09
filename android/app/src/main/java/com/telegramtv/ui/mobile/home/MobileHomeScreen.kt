@@ -146,6 +146,39 @@ fun MobileHomeScreen(
                 }
             }
 
+            if (uiState.currentFolderId == null && uiState.favorites.isNotEmpty()) {
+                item {
+                    SectionHeader("Favorites")
+                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(uiState.favorites) { file ->
+                            RecentFileCard(file = file, serverUrl = uiState.serverUrl, onClick = onPlayFile)
+                        }
+                    }
+                }
+            }
+
+            if (uiState.currentFolderId == null && uiState.recentlyWatched.isNotEmpty()) {
+                item {
+                    SectionHeader("Recently Watched")
+                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(uiState.recentlyWatched) { file ->
+                            RecentFileCard(file = file, serverUrl = uiState.serverUrl, onClick = onPlayFile)
+                        }
+                    }
+                }
+            }
+
+            if (uiState.currentFolderId == null && uiState.collections.isNotEmpty()) {
+                item {
+                    SectionHeader("Collections")
+                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(uiState.collections) { collection ->
+                            CollectionCard(collection.name, collection.itemCount)
+                        }
+                    }
+                }
+            }
+
             // 4. File Browser Header
             item {
                 Row(
@@ -611,6 +644,26 @@ fun RecentFileCard(file: FileItem, serverUrl: String, onClick: (Int) -> Unit) {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+@Composable
+fun CollectionCard(name: String, itemCount: Int) {
+    Card(
+        modifier = Modifier.width(170.dp).height(92.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MobileSurface)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(
+                Brush.linearGradient(listOf(MobilePrimary.copy(alpha = 0.75f), MobileSurface))
+            )
+        ) {
+            Column(modifier = Modifier.padding(14.dp).align(Alignment.BottomStart)) {
+                Text(name, color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("$itemCount items", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall)
+            }
+        }
     }
 }
 

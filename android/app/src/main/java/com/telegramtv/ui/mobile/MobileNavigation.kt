@@ -12,10 +12,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -33,6 +35,7 @@ import androidx.navigation.navArgument
 import com.telegramtv.ui.mobile.auth.MobileLoginScreen
 import com.telegramtv.ui.mobile.home.MobileHomeScreen
 import com.telegramtv.ui.mobile.player.MobilePlayerScreen
+import com.telegramtv.ui.mobile.favorites.MobileFavoritesScreen
 import androidx.compose.material3.MaterialTheme
 
 sealed class BottomNavItem(
@@ -43,6 +46,7 @@ sealed class BottomNavItem(
 ) {
     object Home : BottomNavItem("home", "Home", Icons.Filled.Home, Icons.Outlined.Home)
     object Search : BottomNavItem("search", "Search", Icons.Filled.Search, Icons.Outlined.Search)
+    object Favorites : BottomNavItem("favorites", "Favorites", Icons.Filled.Favorite, Icons.Outlined.FavoriteBorder)
     object Downloads : BottomNavItem("downloads", "Downloads", Icons.Filled.Download, Icons.Outlined.Download)
 }
 
@@ -162,6 +166,9 @@ fun MainAppScreen(
                     }
                 )
             }
+            composable(BottomNavItem.Favorites.route) {
+                MobileFavoritesScreen(onPlayFile = onNavigateToPlayer)
+            }
             composable(BottomNavItem.Downloads.route) {
                 com.telegramtv.ui.mobile.downloads.MobileDownloadsScreen()
             }
@@ -182,6 +189,7 @@ fun GlassmorphismBottomNavigation(
         val items = listOf(
             BottomNavItem.Home,
             BottomNavItem.Search,
+            BottomNavItem.Favorites,
             BottomNavItem.Downloads
         )
 
@@ -219,4 +227,3 @@ fun GlassmorphismBottomNavigation(
         }
     }
 }
-
