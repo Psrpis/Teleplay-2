@@ -1,15 +1,24 @@
 """
 Shared business logic and database queries.
 """
+import asyncio
 import json
+import logging
 import re
+import tempfile
+from pathlib import Path
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func
 from sqlalchemy.orm import selectinload
 
 from .models import File, WatchProgress, Folder, FileTag, Tag, MediaMetadata
 from .auth import create_media_token
+from .database import async_session
+from . import telegram
+
+
+logger = logging.getLogger(__name__)
 
 
 VIDEO_EXTENSIONS = (".mp4", ".mkv", ".mov", ".avi", ".webm", ".m4v", ".ts", ".wmv", ".flv")
@@ -251,3 +260,122 @@ async def fetch_continue_watching_files(db: AsyncSession, user_id: int, limit: i
     )
     result = await db.execute(query)
     return result.scalars().unique().all()
+
+
+async def probe_file(path: Path) -> dict:
+    """Run ffprobe against a downloaded media file and return its JSON output."""
+    process = await asyncio.create_subprocess_exec(
+        "ffprobe",
+        "-v", "quiet",
+        "-print_format", "json",
+        "-show_format",
+        "-show_streams",
+        str(path),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await process.communicate()
+    if process.returncode != 0:
+        detail = stderr.decode(errors="replace").strip()
+        raise RuntimeError(detail or f"ffprobe exited with {process.returncode}")
+    return json.loads(stdout)
+
+
+def extract_metadata(data: dict, file_type: str) -> tuple[int | None, int | None, int | None]:
+    """Extract duration and video dimensions from ffprobe JSON."""
+    format_info = data.get("format") or {}
+    duration_value = format_info.get("duration")
+    if duration_value is None:
+        for stream in data.get("streams") or []:
+            if stream.get("duration") is not None:
+                duration_value = stream["duration"]
+                break
+    duration = max(0, int(round(float(duration_value)))) if duration_value is not None else None
+    if file_type != "video":
+        return duration, None, None
+    video_stream = next(
+        (stream for stream in data.get("streams") or [] if stream.get("codec_type") == "video"),
+        {},
+    )
+    return duration, video_stream.get("width"), video_stream.get("height")
+
+
+async def process_one(file: File, db: AsyncSession) -> bool:
+    """Download, probe, and persist one file using the already-running Telegram client."""
+    client = telegram.tg_client
+    if client is None or not client.is_connected:
+        raise RuntimeError("Telegram client is not connected")
+
+    temp_path: Path | None = None
+    try:
+        suffix = Path(file.file_name or "media.bin").suffix or ".bin"
+        with tempfile.NamedTemporaryFile(prefix="teleplay-", suffix=suffix, delete=False) as handle:
+            temp_path = Path(handle.name)
+        message = await client.get_messages(telegram.settings.telegram_storage_channel_id, file.channel_message_id)
+        await client.download_media(message, file_name=str(temp_path))
+        probe = await probe_file(temp_path)
+        duration, width, height = extract_metadata(probe, file.file_type)
+        if duration is None:
+            raise RuntimeError("ffprobe returned no duration")
+
+        current = await db.get(File, file.id)
+        if current and current.duration is None:
+            current.duration = duration
+            if current.file_type == "video":
+                current.width = width
+                current.height = height
+            await db.commit()
+        return True
+    finally:
+        if temp_path:
+            temp_path.unlink(missing_ok=True)
+
+
+async def backfill_media_metadata(db: AsyncSession | None = None) -> None:
+    """Backfill media metadata inside the running FastAPI/Telegram process.
+
+    The optional session is useful for tests; production background tasks open their
+    own session and reuse the singleton Telegram client created by FastAPI lifespan.
+    """
+    owns_session = db is None
+    session = db or async_session()
+    try:
+        total_query = select(func.count(File.id)).where(
+            File.file_type.in_(("video", "audio")),
+            File.duration.is_(None),
+        )
+        total = int((await session.execute(total_query)).scalar_one())
+        query = select(File).where(
+            File.file_type.in_(("video", "audio")),
+            File.duration.is_(None),
+        ).order_by(File.id)
+        files = (await session.execute(query)).scalars().all()
+        if not files:
+            logger.info("Metadata backfill: no media rows need processing")
+            return
+
+        logger.info("Metadata backfill started: %d/%d media rows", len(files), total)
+        processed = 0
+        attempted = 0
+        for file in files:
+            try:
+                if await process_one(file, session):
+                    processed += 1
+            except Exception:
+                await session.rollback()
+                logger.exception("Metadata backfill failed for file id %s (%s)", file.id, file.file_name)
+            finally:
+                attempted += 1
+                if attempted % 10 == 0 or attempted == len(files):
+                    logger.info(
+                        "Metadata backfill progress: %d/%d attempted, %d succeeded (file id %s)",
+                        attempted,
+                        len(files),
+                        processed,
+                        file.id,
+                    )
+            await asyncio.sleep(0.5)
+        logger.info("Metadata backfill completed: %d/%d processed", processed, len(files))
+    finally:
+        if owns_session:
+            await session.close()

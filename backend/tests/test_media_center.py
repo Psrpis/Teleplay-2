@@ -10,8 +10,7 @@ from app.auth import create_media_token, verify_media_token
 from app.routers.media import bulk_add_collection_items
 from app.routers.files import list_files
 from app.schemas import CollectionBulkAddRequest
-from app.services import add_urls_to_file, classify_media_type, parse_episode_reference, parse_filename_facets, sanitize_filename
-from app.scripts.backfill_media_metadata import metadata_from_probe
+from app.services import add_urls_to_file, classify_media_type, extract_metadata, parse_episode_reference, parse_filename_facets, sanitize_filename
 
 
 def make_file(duration=120):
@@ -66,13 +65,13 @@ def test_document_media_classification_uses_mime_and_extension():
     assert classify_media_type("application/pdf", "notes.pdf") == "document"
 
 
-def test_metadata_from_probe_extracts_duration_and_video_dimensions():
+def test_extract_metadata_extracts_duration_and_video_dimensions():
     probe = {
         "format": {"duration": "123.6"},
         "streams": [{"codec_type": "video", "width": 1920, "height": 1080}],
     }
-    assert metadata_from_probe(probe, "video") == (124, 1920, 1080)
-    assert metadata_from_probe({"streams": [{"duration": "4.2"}]}, "audio") == (4, None, None)
+    assert extract_metadata(probe, "video") == (124, 1920, 1080)
+    assert extract_metadata({"streams": [{"duration": "4.2"}]}, "audio") == (4, None, None)
 
 
 def test_file_serialization_exposes_unwatched_state():

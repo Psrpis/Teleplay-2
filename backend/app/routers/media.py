@@ -5,7 +5,7 @@ import json
 import random
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -43,7 +43,14 @@ from ..schemas import (
     AutoTagResponse,
     WatchedStateUpdate,
 )
-from ..services import add_urls_to_file, auto_tag_file, escape_like, fetch_continue_watching_files, fetch_recent_files
+from ..services import (
+    add_urls_to_file,
+    auto_tag_file,
+    backfill_media_metadata,
+    escape_like,
+    fetch_continue_watching_files,
+    fetch_recent_files,
+)
 
 router = APIRouter(prefix="/media", tags=["Media Center"])
 
@@ -132,6 +139,16 @@ async def media_home(
         "recently_watched": [_file_response(entry.file) for entry in history if entry.file],
         "collections": [_collection_response(collection) for collection in collections],
     }
+
+
+@router.post("/admin/backfill-metadata")
+async def start_metadata_backfill(
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+):
+    """Start metadata extraction using the Telegram client owned by FastAPI lifespan."""
+    background_tasks.add_task(backfill_media_metadata)
+    return {"status": "started"}
 
 
 @router.get("/search")
