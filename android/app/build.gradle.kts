@@ -22,8 +22,8 @@ android {
         applicationId = "com.telegramtv"
         minSdk = 21
         targetSdk = 34
-        versionCode = 11
-        versionName = "1.2.0"
+        versionCode = 12
+        versionName = "1.3.0"
 
         val serverUrl = localProperties.getProperty("TELEGRAM_TV_SERVER_URL", "")
         buildConfigField("String", "DEFAULT_SERVER_URL", "\"$serverUrl\"")
@@ -117,10 +117,6 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
-    // Compose for TV
-    implementation("androidx.tv:tv-foundation:1.0.0-alpha10")
-    implementation("androidx.tv:tv-material:1.0.0-alpha10")
-
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.6")
 
@@ -155,9 +151,6 @@ dependencies {
 
     // Security - Encrypted Preferences
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
-
-    // Leanback (for TV-specific components not in Compose TV yet)
-    implementation("androidx.leanback:leanback:1.0.0")
 
     // Datastore for preferences
     implementation("androidx.datastore:datastore-preferences:1.0.0")

@@ -1,3 +1,5 @@
+@file:OptIn(androidx.media3.common.util.UnstableApi::class)
+
 package com.telegramtv.ui.player
 
 import android.content.Context
@@ -114,6 +116,7 @@ data class PlayerUiState(
 /**
  * ViewModel for the player screen.
  */
+@OptIn(UnstableApi::class)
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,

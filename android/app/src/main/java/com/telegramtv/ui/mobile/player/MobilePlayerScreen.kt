@@ -1,5 +1,9 @@
+@file:SuppressLint("NewApi")
+@file:OptIn(androidx.media3.common.util.UnstableApi::class)
+
 package com.telegramtv.ui.mobile.player
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.pm.ActivityInfo
@@ -50,7 +54,7 @@ import com.telegramtv.ui.player.TrackInfo
 import com.telegramtv.ui.player.SubtitleSize
 import com.telegramtv.ui.mobile.LocalPipMode
 import com.telegramtv.ui.mobile.findActivity
-import com.telegramtv.ui.mobile.MobileMainActivity
+import com.telegramtv.ui.MainActivity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.max
@@ -361,7 +365,7 @@ fun MobilePlayerScreen(
                             viewModel.startBackgroundAudio()
                             onBack()
                         } else {
-                            (activity as? MobileMainActivity)?.enterPip()
+                            (activity as? MainActivity)?.enterPip()
                         }
                     },
                     orientationMode = uiState.orientationLock,

@@ -4,23 +4,23 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -36,6 +36,7 @@ import com.telegramtv.ui.mobile.auth.MobileLoginScreen
 import com.telegramtv.ui.mobile.home.MobileHomeScreen
 import com.telegramtv.ui.mobile.player.MobilePlayerScreen
 import com.telegramtv.ui.mobile.favorites.MobileFavoritesScreen
+import com.telegramtv.ui.mobile.profile.MobileProfileScreen
 import androidx.compose.material3.MaterialTheme
 
 sealed class BottomNavItem(
@@ -46,8 +47,8 @@ sealed class BottomNavItem(
 ) {
     object Home : BottomNavItem("home", "Home", Icons.Filled.Home, Icons.Outlined.Home)
     object Search : BottomNavItem("search", "Search", Icons.Filled.Search, Icons.Outlined.Search)
-    object Favorites : BottomNavItem("favorites", "Favorites", Icons.Filled.Favorite, Icons.Outlined.FavoriteBorder)
-    object Downloads : BottomNavItem("downloads", "Downloads", Icons.Filled.Download, Icons.Outlined.Download)
+    object Library : BottomNavItem("library", "Library", Icons.Filled.Favorite, Icons.Outlined.FavoriteBorder)
+    object Settings : BottomNavItem("settings", "Settings", Icons.Filled.Settings, Icons.Outlined.Settings)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -107,23 +108,21 @@ fun MainAppScreen(
     val tabNavController = rememberNavController()
     val navBackStackEntry by tabNavController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val isTablet = LocalConfiguration.current.screenWidthDp >= 600
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0.dp), // Fix: Allow content to extend behind system bars
         bottomBar = {
-            GlassmorphismBottomNavigation(tabNavController, currentRoute)
+            if (!isTablet) GlassmorphismBottomNavigation(tabNavController, currentRoute)
         }
     ) { innerPadding ->
-        // Inner NavHost for Tabs
-        NavHost(
-            navController = tabNavController,
-            startDestination = BottomNavItem.Home.route + "?folderId={folderId}&folderName={folderName}",
-            modifier = Modifier
-                .padding(innerPadding)
-                .consumeWindowInsets(innerPadding)
-                .fillMaxSize()
-        ) {
+        val navHost: @Composable () -> Unit = {
+            NavHost(
+                navController = tabNavController,
+                startDestination = BottomNavItem.Home.route + "?folderId={folderId}&folderName={folderName}",
+                modifier = Modifier.fillMaxSize()
+            ) {
             composable(
                 route = BottomNavItem.Home.route + "?folderId={folderId}&folderName={folderName}",
                 arguments = listOf(
@@ -166,12 +165,44 @@ fun MainAppScreen(
                     }
                 )
             }
-            composable(BottomNavItem.Favorites.route) {
+            composable(BottomNavItem.Library.route) {
                 MobileFavoritesScreen(onPlayFile = onNavigateToPlayer)
             }
-            composable(BottomNavItem.Downloads.route) {
-                com.telegramtv.ui.mobile.downloads.MobileDownloadsScreen()
+                composable(BottomNavItem.Settings.route) {
+                    MobileProfileScreen(onLogout = onLogout)
+                }
             }
+        }
+        if (isTablet) {
+            Row(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                TabletNavigationRail(tabNavController, currentRoute)
+                navHost()
+            }
+        } else {
+            Box(modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding).fillMaxSize()) {
+                navHost()
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabletNavigationRail(navController: NavHostController, currentRoute: String?) {
+    NavigationRail(containerColor = MaterialTheme.colorScheme.surface) {
+        listOf(BottomNavItem.Home, BottomNavItem.Search, BottomNavItem.Library, BottomNavItem.Settings).forEach { item ->
+            val selected = currentRoute?.startsWith(item.route) == true
+            NavigationRailItem(
+                selected = selected,
+                onClick = {
+                    navController.navigate(item.route) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, item.title) },
+                label = { Text(item.title) }
+            )
         }
     }
 }
@@ -189,8 +220,8 @@ fun GlassmorphismBottomNavigation(
         val items = listOf(
             BottomNavItem.Home,
             BottomNavItem.Search,
-            BottomNavItem.Favorites,
-            BottomNavItem.Downloads
+            BottomNavItem.Library,
+            BottomNavItem.Settings
         )
 
         items.forEach { item ->

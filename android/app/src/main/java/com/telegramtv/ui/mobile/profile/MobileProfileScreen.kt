@@ -22,6 +22,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.telegramtv.data.repository.AuthRepository
 import com.telegramtv.data.repository.SettingsRepository
+import com.telegramtv.BuildConfig
 import com.telegramtv.ui.mobile.auth.MobileLoginScreen
 import com.telegramtv.ui.theme.*
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,6 +50,10 @@ class MobileProfileViewModel @Inject constructor(
             onLogoutSuccess()
         }
     }
+
+    fun saveServerUrl(url: String) {
+        viewModelScope.launch { settingsRepository.setServerUrl(url) }
+    }
 }
 
 @Composable
@@ -58,6 +63,8 @@ fun MobileProfileScreen(
 ) {
     val userName by viewModel.userName.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
+    var showServerDialog by remember { mutableStateOf(false) }
+    var editedServerUrl by remember(serverUrl) { mutableStateOf(serverUrl.orEmpty()) }
 
     Column(
         modifier = Modifier
@@ -110,7 +117,7 @@ fun MobileProfileScreen(
             ProfileMenuItem(
                 icon = Icons.Default.Settings,
                 title = "App Settings",
-                onClick = { /* TODO: Open Settings */ }
+                onClick = { showServerDialog = true }
             )
             
             Spacer(modifier = Modifier.height(12.dp))
@@ -135,10 +142,36 @@ fun MobileProfileScreen(
         Spacer(modifier = Modifier.weight(1f))
         
         Text(
-            text = "Version 1.0.0",
+            text = "Version ${BuildConfig.VERSION_NAME}",
             style = MaterialTheme.typography.labelSmall,
             color = MobileTextSecondary,
             modifier = Modifier.align(Alignment.CenterHorizontally).padding(16.dp)
+        )
+    }
+
+    if (showServerDialog) {
+        AlertDialog(
+            onDismissRequest = { showServerDialog = false },
+            title = { Text("Server URL") },
+            text = {
+                OutlinedTextField(
+                    value = editedServerUrl,
+                    onValueChange = { editedServerUrl = it },
+                    singleLine = true,
+                    label = { Text("Self-hosted server") },
+                    placeholder = { Text("http://192.168.1.100:8000") }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val normalized = editedServerUrl.trim().trimEnd('/')
+                    if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
+                        viewModel.saveServerUrl(normalized)
+                        showServerDialog = false
+                    }
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { showServerDialog = false }) { Text("Cancel") } }
         )
     }
 }

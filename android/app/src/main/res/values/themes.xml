@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.TelegramTV" parent="Theme.Leanback">
+    <style name="Theme.TelegramTV" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:colorPrimary">@color/primary</item>
         <item name="android:colorPrimaryDark">@color/primary_variant</item>
         <item name="android:colorAccent">@color/secondary</item>

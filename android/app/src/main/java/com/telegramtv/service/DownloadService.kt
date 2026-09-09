@@ -1,5 +1,6 @@
 package com.telegramtv.service
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -10,6 +11,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.telegramtv.R
 import com.telegramtv.download.DownloadStatus
 import com.telegramtv.download.DownloadTask
@@ -25,6 +27,7 @@ import javax.inject.Inject
  * Automatically stops itself when all downloads are complete/paused/failed.
  */
 @AndroidEntryPoint
+@SuppressLint("MissingPermission")
 class DownloadService : Service() {
 
     @Inject
@@ -75,7 +78,7 @@ class DownloadService : Service() {
     }
 
     private fun updateNotifications(tasks: Map<Long, DownloadTask>) {
-        val notificationManager = getSystemService(NotificationManager::class.java)
+        val notificationManager = NotificationManagerCompat.from(this)
 
         val activeDownloads = tasks.values.filter {
             it.status == DownloadStatus.RUNNING || it.status == DownloadStatus.PENDING
@@ -97,7 +100,7 @@ class DownloadService : Service() {
                 notificationManager.notify(SUMMARY_NOTIFICATION_ID + 999, notification)
             }
 
-            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopForeground(true)
             stopSelf()
             return
         }
