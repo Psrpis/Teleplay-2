@@ -44,8 +44,12 @@ def create_refresh_token(telegram_id: int, version: int = 0) -> str:
     return jwt.encode(payload, settings.jwt_secret, algorithm="HS256")
 
 
-def create_media_token(user_id: int, file_id: int, lifetime_seconds: int = 300) -> str:
-    """Create a short-lived token scoped to one user's one media file."""
+def create_media_token(user_id: int, file_id: int, lifetime_seconds: int = 43200) -> str:
+    """Create a media token scoped to one user/file for a browsing session.
+
+    Media URLs are embedded in home, browse, and details responses, so the
+    token must remain valid while a client browses before pressing play.
+    """
     expire = datetime.utcnow() + timedelta(seconds=lifetime_seconds)
     payload = {
         "uid": user_id,
