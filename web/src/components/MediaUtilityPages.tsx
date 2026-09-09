@@ -3,12 +3,13 @@ import { BarChart3, CalendarDays, Clock3, FolderPlus, Menu, Search, Trash2 } fro
 import { useSearchParams } from 'react-router-dom';
 import { useBulkAddToCollection, useClearHistory, useCollections, useCreateCollection, useDeleteHistory, useFavorites, useHistory, useMediaSearch, useMediaStats, formatDuration } from '../lib/api';
 import Sidebar from './Sidebar';
+import MobileTabBar from './MobileTabBar';
 import MediaCard from './MediaCard';
 import Toasts from './Toasts';
 
 function Shell({ children, title, eyebrow }: { children: React.ReactNode; title: string; eyebrow: string }) {
-    const [open, setOpen] = useState(true);
-    return <div className="min-h-screen bg-dark-950 text-white"><Sidebar isOpen={open} onClose={() => setOpen(false)} /><main className={`min-h-screen transition-[margin] ${open ? 'md:ml-64' : ''}`}><header className="flex h-16 items-center gap-4 border-b border-white/[0.06] px-4 sm:px-8"><button onClick={() => setOpen((value) => !value)} className="rounded-xl p-2 text-dark-400 hover:bg-white/5 hover:text-white"><Menu className="h-5 w-5" /></button><div><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary-300/80">{eyebrow}</p><h1 className="text-lg font-semibold">{title}</h1></div></header><div className="p-6 sm:p-10 lg:p-16">{children}</div></main><Toasts /></div>;
+    const [open, setOpen] = useState(() => window.innerWidth >= 768);
+    return <div className="min-h-screen bg-dark-950 text-white"><Sidebar isOpen={open} onClose={() => setOpen(false)} /><main className={`min-h-screen transition-[margin] ${open ? 'md:ml-64' : ''}`}><header className="flex h-16 items-center gap-4 border-b border-white/[0.06] px-4 sm:px-8"><button onClick={() => setOpen((value) => !value)} className="rounded-xl p-2 text-dark-400 hover:bg-white/5 hover:text-white"><Menu className="h-5 w-5" /></button><div><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary-300/80">{eyebrow}</p><h1 className="text-lg font-semibold">{title}</h1></div></header><div className="p-6 pb-24 sm:p-10 md:pb-10 lg:p-16">{children}</div></main><MobileTabBar /><Toasts /></div>;
 }
 
 export function SearchPage() {

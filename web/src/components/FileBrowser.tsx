@@ -12,6 +12,7 @@ import MoveFileModal from './MoveFileModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
 import RenameModal from './RenameModal';
 import Sidebar from './Sidebar';
+import MobileTabBar from './MobileTabBar';
 import Toasts from './Toasts';
 
 const FILE_SORT_OPTIONS: Array<{ value: FileSort; label: string }> = [
@@ -130,7 +131,7 @@ export default function FileBrowser() {
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [isSelecting, setIsSelecting] = useState(false);
-    const [isSidebarOpen, setSidebarOpen] = useState(true);
+    const [isSidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768);
     const selectionStart = useRef({ x: 0, y: 0 });
 
     // handle refresh
@@ -658,7 +659,7 @@ export default function FileBrowser() {
                 {/* Content Area */}
                 <div 
                     ref={containerRef}
-                    className="flex-1 overflow-auto p-6 relative outline-none"
+                    className="flex-1 overflow-auto p-6 pb-20 md:pb-6 relative outline-none"
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
@@ -748,7 +749,7 @@ export default function FileBrowser() {
                     )}
                 </div>
             </main>
-            
+            <MobileTabBar />
             <Toasts />
 
             {/* Modals */}

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMediaHome, useSetWatched, useSurpriseMe, useToggleFavorite, TelegramFile } from '../lib/api';
 import { useAppStore } from '../lib/store';
 import Sidebar from './Sidebar';
+import MobileTabBar from './MobileTabBar';
 import MediaCard from './MediaCard';
 import Toasts from './Toasts';
 
@@ -16,7 +17,7 @@ function artwork(file: TelegramFile | null) {
 
 export default function MediaCenterPage() {
     const { data, isLoading, isError, refetch } = useMediaHome();
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768);
     const [search, setSearch] = useState('');
     const navigate = useNavigate();
     const setPreviewFile = useAppStore((state) => state.setPreviewFile);
@@ -52,7 +53,7 @@ export default function MediaCenterPage() {
                 </header>
 
                 {isLoading ? <DashboardSkeleton /> : isError ? <ErrorState onRetry={() => refetch()} /> : (
-                    <div className="pb-16">
+                    <div className="pb-24 md:pb-16">
                         {hero ? <section className="relative isolate min-h-[420px] overflow-hidden sm:min-h-[500px]">
                             {heroArt ? <img src={heroArt} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-65" /> : <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_20%_20%,#6d28d9,#111827_50%,#020617)]" />}
                             <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,#020617_0%,rgba(2,6,23,.82)_35%,rgba(2,6,23,.2)_75%),linear-gradient(0deg,#020617_0%,transparent_65%)]" />
@@ -79,6 +80,7 @@ export default function MediaCenterPage() {
                     </div>
                 )}
             </main>
+            <MobileTabBar />
             <Toasts />
         </div>
     );
