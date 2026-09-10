@@ -236,16 +236,148 @@ class FilesRepository @Inject constructor(
      */
     suspend fun getRecentFiles(limit: Int = 20): Result<List<FileItem>> {
         return try {
-            val response = api.getRecentFiles(limit)
+            val response = api.getRecentFilesWeb(limit)
             if (response.isSuccessful) {
-                Result.success(response.body()!!)
+                Result.success(response.body()?.items ?: emptyList())
             } else {
-                Result.failure(Exception("Failed to load recent files"))
+                // Fallback to tv endpoint if needed
+                val fallback = api.getRecentFiles(limit)
+                if (fallback.isSuccessful) Result.success(fallback.body() ?: emptyList())
+                else Result.failure(Exception("Failed to load recent files"))
             }
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
+
+    /**
+     * Get continue watching files from web parity endpoint.
+     */
+    suspend fun getContinueWatchingWeb(limit: Int = 20): Result<List<FileItem>> {
+        return try {
+            val response = api.getContinueWatchingWeb(limit)
+            if (response.isSuccessful) {
+                Result.success(response.body()?.items ?: emptyList())
+            } else {
+                val fallback = api.getContinueWatching()
+                if (fallback.isSuccessful) Result.success(fallback.body() ?: emptyList())
+                else Result.failure(Exception("Failed to load continue watching"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun removeContinueWatching(fileId: Int): Result<Unit> {
+        return try {
+            val response = api.removeContinueWatching(fileId)
+            if (response.isSuccessful) Result.success(Unit)
+            else Result.failure(Exception("Failed to remove continue watching item"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun clearContinueWatching(): Result<Unit> {
+        return try {
+            val response = api.clearContinueWatching()
+            if (response.isSuccessful) Result.success(Unit)
+            else Result.failure(Exception("Failed to clear continue watching"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getHistory(query: String? = null): Result<List<HistoryEntry>> {
+        return try {
+            val response = api.getHistory(query)
+            if (response.isSuccessful) Result.success(response.body() ?: emptyList())
+            else Result.failure(Exception("Failed to load history"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteHistoryItem(id: Int): Result<Unit> {
+        return try {
+            val response = api.deleteHistoryItem(id)
+            if (response.isSuccessful) Result.success(Unit)
+            else Result.failure(Exception("Failed to delete history item"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun clearHistory(): Result<Unit> {
+        return try {
+            val response = api.clearHistory()
+            if (response.isSuccessful) Result.success(Unit)
+            else Result.failure(Exception("Failed to clear history"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getCollections(): Result<List<MediaCollection>> {
+        return try {
+            val response = api.getCollections()
+            if (response.isSuccessful) Result.success(response.body() ?: emptyList())
+            else Result.failure(Exception("Failed to load collections"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun createCollection(name: String, description: String? = null): Result<MediaCollection> {
+        return try {
+            val response = api.createCollection(CreateCollectionRequest(name, description))
+            if (response.isSuccessful) Result.success(response.body()!!)
+            else Result.failure(Exception("Failed to create collection"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun bulkAddToCollection(collectionId: Int, query: String): Result<MediaCollection> {
+        return try {
+            val response = api.bulkAddToCollection(collectionId, BulkAddCollectionRequest(query))
+            if (response.isSuccessful) Result.success(response.body()!!)
+            else Result.failure(Exception("Failed to add to collection"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getMediaStats(): Result<MediaStats> {
+        return try {
+            val response = api.getMediaStats()
+            if (response.isSuccessful) Result.success(response.body()!!)
+            else Result.failure(Exception("Failed to load media statistics"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getSurpriseMe(fileType: String? = null): Result<FileItem> {
+        return try {
+            val response = api.getSurpriseMe(fileType = fileType)
+            if (response.isSuccessful) Result.success(response.body()!!)
+            else Result.failure(Exception("No media found"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun searchMedia(query: String, fileType: String? = null): Result<List<FileItem>> {
+        return try {
+            val response = api.searchMedia(query = query, fileType = fileType)
+            if (response.isSuccessful) Result.success(response.body()?.files ?: emptyList())
+            else Result.failure(Exception("Search failed"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
 
     /**
      * Search for TV.

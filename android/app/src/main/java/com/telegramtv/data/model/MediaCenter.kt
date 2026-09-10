@@ -46,3 +46,30 @@ data class AutoTagResponse(
     @SerializedName("codec") val codec: String? = null,
     @SerializedName("tags") val tags: List<String> = emptyList()
 )
+
+data class HistoryEntry(
+    @SerializedName("id") val id: Int,
+    @SerializedName("file_id") val fileId: Int,
+    @SerializedName("watched_at") val watchedAt: String,
+    @SerializedName("position") val position: Int? = null,
+    @SerializedName("duration") val duration: Int? = null,
+    @SerializedName("file") val file: FileItem? = null
+)
+
+data class MediaStats(
+    @SerializedName("total_watched") val totalWatched: Int = 0,
+    @SerializedName("movies_watched") val moviesWatched: Int = 0,
+    @SerializedName("episodes_watched") val episodesWatched: Int = 0,
+    @SerializedName("total_watch_time") val totalWatchTime: Long = 0L,
+    @SerializedName("recent_activity") val recentActivity: List<FileItem> = emptyList()
+)
+
+data class CreateCollectionRequest(
+    @SerializedName("name") val name: String,
+    @SerializedName("description") val description: String? = null
+)
+
+data class BulkAddCollectionRequest(
+    @SerializedName("query") val query: String
+)
+

@@ -205,8 +205,54 @@ interface TelePlayApi {
     @POST("media/auto-tag")
     suspend fun autoTagLibrary(@Query("limit") limit: Int = 5000): Response<List<AutoTagResponse>>
 
+    // ============ Media Parity Endpoints ============
+
+    @GET("files/recent")
+    suspend fun getRecentFilesWeb(@Query("limit") limit: Int = 20): Response<PaginatedResponse<FileItem>>
+
+    @GET("files/continue-watching")
+    suspend fun getContinueWatchingWeb(@Query("limit") limit: Int = 20): Response<PaginatedResponse<FileItem>>
+
+    @DELETE("media/continue-watching/{id}")
+    suspend fun removeContinueWatching(@Path("id") fileId: Int): Response<Unit>
+
+    @DELETE("media/continue-watching")
+    suspend fun clearContinueWatching(): Response<Unit>
+
+    @GET("media/history")
+    suspend fun getHistory(@Query("q") query: String? = null): Response<List<HistoryEntry>>
+
+    @DELETE("media/history/{id}")
+    suspend fun deleteHistoryItem(@Path("id") id: Int): Response<Unit>
+
+    @DELETE("media/history")
+    suspend fun clearHistory(): Response<Unit>
+
+    @GET("media/collections")
+    suspend fun getCollections(): Response<List<MediaCollection>>
+
+    @POST("media/collections")
+    suspend fun createCollection(@Body body: CreateCollectionRequest): Response<MediaCollection>
+
+    @POST("media/collections/{id}/items/bulk-add")
+    suspend fun bulkAddToCollection(
+        @Path("id") collectionId: Int,
+        @Body body: BulkAddCollectionRequest
+    ): Response<MediaCollection>
+
+    @GET("media/stats")
+    suspend fun getMediaStats(): Response<MediaStats>
+
+    @GET("media/surprise")
+    suspend fun getSurpriseMe(
+        @Query("file_type") fileType: String? = null,
+        @Query("unwatched") unwatched: Boolean? = null,
+        @Query("favorite") favorite: Boolean? = null
+    ): Response<FileItem>
+
 
     // ============ TV-Specific Endpoints ============
+
 
     /**
      * Get TV browse data (continue watching, recent, folders) in one call.

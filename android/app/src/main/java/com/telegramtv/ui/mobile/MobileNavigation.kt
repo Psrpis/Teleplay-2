@@ -11,13 +11,13 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.VideoLibrary
+import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalConfiguration
@@ -35,8 +35,9 @@ import androidx.navigation.navArgument
 import com.telegramtv.ui.mobile.auth.MobileLoginScreen
 import com.telegramtv.ui.mobile.home.MobileHomeScreen
 import com.telegramtv.ui.mobile.player.MobilePlayerScreen
-import com.telegramtv.ui.mobile.favorites.MobileFavoritesScreen
-import com.telegramtv.ui.mobile.profile.MobileProfileScreen
+import com.telegramtv.ui.mobile.search.MobileSearchScreen
+import com.telegramtv.ui.mobile.library.MobileLibraryScreen
+import com.telegramtv.ui.mobile.more.MobileMoreScreen
 import androidx.compose.material3.MaterialTheme
 
 sealed class BottomNavItem(
@@ -47,14 +48,14 @@ sealed class BottomNavItem(
 ) {
     object Home : BottomNavItem("home", "Home", Icons.Filled.Home, Icons.Outlined.Home)
     object Search : BottomNavItem("search", "Search", Icons.Filled.Search, Icons.Outlined.Search)
-    object Library : BottomNavItem("library", "Library", Icons.Filled.Favorite, Icons.Outlined.FavoriteBorder)
-    object Settings : BottomNavItem("settings", "Settings", Icons.Filled.Settings, Icons.Outlined.Settings)
+    object Library : BottomNavItem("library", "Library", Icons.Filled.VideoLibrary, Icons.Outlined.VideoLibrary)
+    object More : BottomNavItem("more", "More", Icons.Filled.MoreHoriz, Icons.Outlined.MoreHoriz)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileScaffold(
-    startDestination: String = "dashboard" // Changed default to dashboard wrapper
+    startDestination: String = "dashboard"
 ) {
     val rootNavController = rememberNavController()
 
@@ -112,7 +113,7 @@ fun MainAppScreen(
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        contentWindowInsets = WindowInsets(0.dp), // Fix: Allow content to extend behind system bars
+        contentWindowInsets = WindowInsets(0.dp),
         bottomBar = {
             if (!isTablet) GlassmorphismBottomNavigation(tabNavController, currentRoute)
         }
@@ -123,56 +124,74 @@ fun MainAppScreen(
                 startDestination = BottomNavItem.Home.route + "?folderId={folderId}&folderName={folderName}",
                 modifier = Modifier.fillMaxSize()
             ) {
-            composable(
-                route = BottomNavItem.Home.route + "?folderId={folderId}&folderName={folderName}",
-                arguments = listOf(
-                    navArgument("folderId") { 
-                        type = NavType.IntType
-                        defaultValue = -1 // Use -1 to represent null/root
-                    },
-                    navArgument("folderName") { 
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                    }
-                )
-            ) {
-                MobileHomeScreen(
-                    onPlayFile = onNavigateToPlayer,
-                    onLogout = onLogout,
-                    onSearchClick = {
-                        tabNavController.navigate(BottomNavItem.Search.route) {
-                            popUpTo(tabNavController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
+                composable(
+                    route = BottomNavItem.Home.route + "?folderId={folderId}&folderName={folderName}",
+                    arguments = listOf(
+                        navArgument("folderId") { 
+                            type = NavType.IntType
+                            defaultValue = -1
+                        },
+                        navArgument("folderName") { 
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
                         }
-                    }
-                )
-            }
-            composable(BottomNavItem.Search.route) {
-                com.telegramtv.ui.mobile.search.MobileSearchScreen(
-                    onPlayFile = onNavigateToPlayer,
-                    onGoToFolder = { folderId, folderName ->
-                         tabNavController.navigate(BottomNavItem.Home.route + "?folderId=$folderId&folderName=$folderName") {
-                            popUpTo(tabNavController.graph.findStartDestination().id) {
-                                saveState = true
+                    )
+                ) {
+                    MobileHomeScreen(
+                        onPlayFile = onNavigateToPlayer,
+                        onLogout = onLogout,
+                        onSearchClick = {
+                            tabNavController.navigate(BottomNavItem.Search.route) {
+                                popUpTo(tabNavController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            launchSingleTop = true
-                            restoreState = true
+                        },
+                        onNavigateToTab = { targetRoute ->
+                            tabNavController.navigate(targetRoute) {
+                                popUpTo(tabNavController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         }
-                    }
-                )
-            }
-            composable(BottomNavItem.Library.route) {
-                MobileFavoritesScreen(onPlayFile = onNavigateToPlayer)
-            }
-                composable(BottomNavItem.Settings.route) {
-                    MobileProfileScreen(onLogout = onLogout)
+                    )
+                }
+
+                composable(BottomNavItem.Search.route) {
+                    MobileSearchScreen(
+                        onPlayFile = onNavigateToPlayer,
+                        onGoToFolder = { folderId, folderName ->
+                            tabNavController.navigate(BottomNavItem.Home.route + "?folderId=$folderId&folderName=$folderName") {
+                                popUpTo(tabNavController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                }
+
+                composable(BottomNavItem.Library.route) {
+                    MobileLibraryScreen(
+                        onPlayFile = onNavigateToPlayer
+                    )
+                }
+
+                composable(BottomNavItem.More.route) {
+                    MobileMoreScreen(
+                        onPlayFile = onNavigateToPlayer,
+                        onLogout = onLogout
+                    )
                 }
             }
         }
+
         if (isTablet) {
             Row(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
                 TabletNavigationRail(tabNavController, currentRoute)
@@ -189,7 +208,12 @@ fun MainAppScreen(
 @Composable
 private fun TabletNavigationRail(navController: NavHostController, currentRoute: String?) {
     NavigationRail(containerColor = MaterialTheme.colorScheme.surface) {
-        listOf(BottomNavItem.Home, BottomNavItem.Search, BottomNavItem.Library, BottomNavItem.Settings).forEach { item ->
+        listOf(
+            BottomNavItem.Home,
+            BottomNavItem.Search,
+            BottomNavItem.Library,
+            BottomNavItem.More
+        ).forEach { item ->
             val selected = currentRoute?.startsWith(item.route) == true
             NavigationRailItem(
                 selected = selected,
@@ -213,15 +237,15 @@ fun GlassmorphismBottomNavigation(
     currentRoute: String?
 ) {
     NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-        tonalElevation = 0.dp,
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+        tonalElevation = 3.dp,
         modifier = Modifier
     ) {
         val items = listOf(
             BottomNavItem.Home,
             BottomNavItem.Search,
             BottomNavItem.Library,
-            BottomNavItem.Settings
+            BottomNavItem.More
         )
 
         items.forEach { item ->
@@ -252,7 +276,7 @@ fun GlassmorphismBottomNavigation(
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                 )
             )
         }

@@ -34,8 +34,29 @@ data class FileItem(
     @SerializedName("progress_percent") val progressPercentFromServer: Float? = null,
     @SerializedName("watched_state") val watchedState: String? = null,
     @SerializedName("is_favorite") val isFavorite: Boolean = false,
-    @SerializedName("tags") val tags: List<String> = emptyList()
+    @SerializedName("tags") val tags: List<String> = emptyList(),
+    @SerializedName("metadata") val metadata: MediaMetadata? = null,
+    @SerializedName("last_pos") val lastPos: Int? = null,
+    @SerializedName("last_watched") val lastWatched: String? = null
 ) {
+    /**
+     * Best title to display (media title if metadata exists, else file name).
+     */
+    val displayTitle: String
+        get() = metadata?.title?.takeIf { it.isNotBlank() } ?: fileName
+
+    /**
+     * Best poster image URL to display.
+     */
+    val effectivePosterUrl: String?
+        get() = metadata?.posterUrl?.takeIf { it.isNotBlank() } ?: thumbnailUrl
+
+    /**
+     * Best backdrop image URL to display.
+     */
+    val effectiveBackdropUrl: String?
+        get() = metadata?.backdropUrl?.takeIf { it.isNotBlank() } ?: metadata?.posterUrl?.takeIf { it.isNotBlank() } ?: thumbnailUrl
+
     /**
      * Human-readable file size (e.g., "1.5 GB").
      */
@@ -118,3 +139,26 @@ data class PaginatedResponse<T>(
     @SerializedName("page") val page: Int,
     @SerializedName("per_page") val perPage: Int
 )
+
+/**
+ * Rich media metadata (TMDb / IMDb scraped info)
+ */
+data class MediaMetadata(
+    @SerializedName("title") val title: String? = null,
+    @SerializedName("original_title") val originalTitle: String? = null,
+    @SerializedName("overview") val overview: String? = null,
+    @SerializedName("year") val year: Int? = null,
+    @SerializedName("runtime") val runtime: Int? = null,
+    @SerializedName("genres") val genres: List<String> = emptyList(),
+    @SerializedName("rating") val rating: Float? = null,
+    @SerializedName("poster_url") val posterUrl: String? = null,
+    @SerializedName("backdrop_url") val backdropUrl: String? = null,
+    @SerializedName("cast") val cast: List<String> = emptyList(),
+    @SerializedName("directors") val directors: List<String> = emptyList(),
+    @SerializedName("external_id") val externalId: String? = null,
+    @SerializedName("media_type") val mediaType: String? = null,
+    @SerializedName("season") val season: Int? = null,
+    @SerializedName("episode") val episode: Int? = null,
+    @SerializedName("provider") val provider: String? = null
+)
+

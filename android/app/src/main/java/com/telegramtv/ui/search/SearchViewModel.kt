@@ -19,8 +19,10 @@ import javax.inject.Inject
  */
 data class SearchUiState(
     val query: String = "",
+    val activeFilter: String = "ALL",
     val isSearching: Boolean = false,
     val results: List<FileItem> = emptyList(),
+    val recentQueries: List<String> = listOf("Action", "Drama", "Sci-Fi", "Comedy"),
     val hasSearched: Boolean = false,
     val serverUrl: String = "",
     val folders: List<com.telegramtv.data.model.Folder> = emptyList(),
@@ -120,6 +122,18 @@ class SearchViewModel @Inject constructor(
             hasSearched = false
         )
     }
+
+    fun setActiveFilter(filter: String) {
+        _uiState.value = _uiState.value.copy(activeFilter = filter)
+    }
+
+    fun addRecentQuery(q: String) {
+        val current = _uiState.value.recentQueries.toMutableList()
+        current.remove(q)
+        current.add(0, q)
+        _uiState.value = _uiState.value.copy(recentQueries = current.take(8))
+    }
+
 
     // --- File Operations (Mirrored from MobileHomeViewModel) ---
     

@@ -49,9 +49,11 @@ fun MobileHomeScreen(
     viewModel: MobileHomeViewModel = hiltViewModel(),
     onPlayFile: (Int) -> Unit,
     onLogout: () -> Unit,
-    onSearchClick: () -> Unit
+    onSearchClick: () -> Unit,
+    onNavigateToTab: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var selectedDetailFile by remember { mutableStateOf<FileItem?>(null) }
     
     // Pull to Refresh State
     val pullToRefreshState = rememberPullToRefreshState()
@@ -108,10 +110,25 @@ fun MobileHomeScreen(
                 )
             }
 
+            // Hero Banner (Featured Content)
+            val heroFile = if (uiState.currentFolderId == null) {
+                uiState.continueWatching.firstOrNull() ?: uiState.recentFiles.firstOrNull()
+            } else null
+            if (heroFile != null) {
+                item {
+                    HomeHeroBanner(
+                        file = heroFile,
+                        serverUrl = uiState.serverUrl,
+                        onPlayClick = { onPlayFile(heroFile.id) },
+                        onDetailClick = { selectedDetailFile = heroFile }
+                    )
+                }
+            }
+
             // 2. Continue Watching (Only on Root)
             if (uiState.currentFolderId == null && uiState.continueWatching.isNotEmpty()) {
                 item {
-                    SectionHeader("Continue Watching")
+                    SectionHeader("Continue Watching", onSeeAllClick = { onNavigateToTab("library") })
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -130,7 +147,7 @@ fun MobileHomeScreen(
             // 3. Recent Files (Only on Root)
             if (uiState.currentFolderId == null && uiState.recentFiles.isNotEmpty()) {
                 item {
-                    SectionHeader("Recently Added")
+                    SectionHeader("Recently Added", onSeeAllClick = { onNavigateToTab("library") })
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -139,7 +156,7 @@ fun MobileHomeScreen(
                             RecentFileCard(
                                 file = file, 
                                 serverUrl = uiState.serverUrl,
-                                onClick = onPlayFile
+                                onClick = { selectedDetailFile = file }
                             )
                         }
                     }
@@ -148,10 +165,10 @@ fun MobileHomeScreen(
 
             if (uiState.currentFolderId == null && uiState.favorites.isNotEmpty()) {
                 item {
-                    SectionHeader("Favorites")
+                    SectionHeader("Favorites", onSeeAllClick = { onNavigateToTab("library") })
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(uiState.favorites) { file ->
-                            RecentFileCard(file = file, serverUrl = uiState.serverUrl, onClick = onPlayFile)
+                            RecentFileCard(file = file, serverUrl = uiState.serverUrl, onClick = { selectedDetailFile = file })
                         }
                     }
                 }
@@ -159,10 +176,10 @@ fun MobileHomeScreen(
 
             if (uiState.currentFolderId == null && uiState.recentlyWatched.isNotEmpty()) {
                 item {
-                    SectionHeader("Recently Watched")
+                    SectionHeader("Recently Watched", onSeeAllClick = { onNavigateToTab("library") })
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(uiState.recentlyWatched) { file ->
-                            RecentFileCard(file = file, serverUrl = uiState.serverUrl, onClick = onPlayFile)
+                            RecentFileCard(file = file, serverUrl = uiState.serverUrl, onClick = { selectedDetailFile = file })
                         }
                     }
                 }
@@ -170,7 +187,7 @@ fun MobileHomeScreen(
 
             if (uiState.currentFolderId == null && uiState.collections.isNotEmpty()) {
                 item {
-                    SectionHeader("Collections")
+                    SectionHeader("Collections", onSeeAllClick = { onNavigateToTab("library") })
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(uiState.collections) { collection ->
                             CollectionCard(collection.name, collection.itemCount)
@@ -432,6 +449,25 @@ fun MobileHomeScreen(
             }
         )
     }
+
+    // Media Detail Sheet
+    selectedDetailFile?.let { detailFile ->
+        MediaDetailSheet(
+            file = detailFile,
+            serverUrl = uiState.serverUrl,
+            onDismiss = { selectedDetailFile = null },
+            onPlay = {
+                selectedDetailFile = null
+                onPlayFile(detailFile.id)
+            },
+            onToggleFavorite = { isFav ->
+                viewModel.toggleFavorite(detailFile.id, isFav)
+            },
+            onToggleWatched = { isWatched ->
+                viewModel.updateWatchedState(detailFile.id, if (isWatched) "watched" else "unwatched")
+            }
+        )
+    }
 }
 
 @Composable
@@ -548,103 +584,228 @@ fun HomeHeader(
 }
 
 @Composable
-fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onBackground,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-    )
+fun SectionHeader(
+    title: String,
+    onSeeAllClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold
+        )
+        if (onSeeAllClick != null) {
+            TextButton(
+                onClick = onSeeAllClick,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "See All",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
 }
 
 @Composable
-fun ContinueWatchingCard(file: FileItem, serverUrl: String, onClick: (Int) -> Unit) {
+fun HomeHeroBanner(
+    file: FileItem,
+    serverUrl: String,
+    onPlayClick: () -> Unit,
+    onDetailClick: () -> Unit
+) {
+    val backdrop = (file.effectiveBackdropUrl ?: file.effectivePosterUrl)?.let { url ->
+        if (url.startsWith("http")) url else "${serverUrl.trimEnd('/')}/$url"
+    } ?: "${serverUrl.trimEnd('/')}/api/stream/${file.id}/thumbnail"
+
     Card(
+        shape = RoundedCornerShape(16.dp),
         modifier = Modifier
-            .width(280.dp)
-            .height(160.dp)
-            .clickable { onClick(file.id) },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .height(200.dp)
+            .clickable(onClick = onDetailClick)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(file.thumbnailUrl?.let { if (it.startsWith("http")) it else "$serverUrl$it" }
-                        ?: "$serverUrl/api/stream/${file.id}/thumbnail")
+                    .data(backdrop)
                     .crossfade(true)
                     .build(),
-                contentDescription = null,
+                contentDescription = file.displayTitle,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-            
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)),
+                            startY = 40f
+                        )
+                    )
+            )
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = file.displayTitle,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                file.metadata?.genres?.takeIf { it.isNotEmpty() }?.let { genres ->
+                    Text(
+                        text = genres.take(3).joinToString(" • "),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.8f),
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = onPlayClick,
+                        shape = RoundedCornerShape(20.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(if (file.hasProgress) "Resume" else "Play", fontSize = 13.sp)
+                    }
+
+                    OutlinedButton(
+                        onClick = onDetailClick,
+                        shape = RoundedCornerShape(20.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.7f))
+                    ) {
+                        Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Details", fontSize = 13.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ContinueWatchingCard(file: FileItem, serverUrl: String, onClick: (Int) -> Unit) {
+    val progress = (file.progressPercent ?: 0) / 100f
+    val imagePath = file.effectiveBackdropUrl ?: file.effectivePosterUrl ?: file.thumbnailUrl
+    val imageUrl = imagePath?.let { if (it.startsWith("http")) it else "${serverUrl.trimEnd('/')}/$it" }
+        ?: "${serverUrl.trimEnd('/')}/api/stream/${file.id}/thumbnail"
+
+    Card(
+        modifier = Modifier
+            .width(260.dp)
+            .height(150.dp)
+            .clickable { onClick(file.id) },
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(imageUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = file.displayTitle,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+
             // Overlay
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.3f))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)),
+                            startY = 60f
+                        )
+                    )
             )
-            
+
             // Play Icon
-            Icon(
-                Icons.Default.PlayCircle,
-                contentDescription = "Play",
-                tint = Color.White,
-                modifier = Modifier.align(Alignment.Center).size(48.dp)
-            )
-            
-            // Progress Bar (Fake for now or use real data)
-            LinearProgressIndicator(
-                progress = { 0.5f },
-                modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = Color.Transparent
-            )
-            
-            Text(
-                text = file.fileName,
-                color = Color.White,
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.align(Alignment.BottomStart).padding(8.dp).padding(bottom = 8.dp)
-            )
+            Surface(
+                shape = CircleShape,
+                color = Color.Black.copy(alpha = 0.6f),
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(44.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = "Resume",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+
+            // Bottom title & progress
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomStart)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = file.displayTitle,
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                LinearProgressIndicator(
+                    progress = { if (progress > 0f) progress else 0.35f },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp)),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = Color.White.copy(alpha = 0.3f)
+                )
+            }
         }
     }
 }
 
 @Composable
 fun RecentFileCard(file: FileItem, serverUrl: String, onClick: (Int) -> Unit) {
-    Column(
-        modifier = Modifier.width(140.dp).clickable { onClick(file.id) }
-    ) {
-        Card(
-            modifier = Modifier.size(140.dp, 100.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-              AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(file.thumbnailUrl?.let { if (it.startsWith("http")) it else "$serverUrl$it" }
-                        ?: "$serverUrl/api/stream/${file.id}/thumbnail")
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = file.fileName,
-            color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.bodySmall,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
+    MediaPosterCard(
+        file = file,
+        serverUrl = serverUrl,
+        onClick = { onClick(file.id) },
+        modifier = Modifier.width(115.dp)
+    )
 }
 
 @Composable

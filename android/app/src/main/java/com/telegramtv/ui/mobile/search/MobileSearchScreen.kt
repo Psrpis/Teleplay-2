@@ -3,279 +3,224 @@ package com.telegramtv.ui.mobile.search
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.telegramtv.ui.search.SearchViewModel
-import com.telegramtv.ui.theme.*
-import com.telegramtv.ui.mobile.components.*
 import com.telegramtv.data.model.FileItem
-import android.util.Log
+import com.telegramtv.ui.mobile.components.MediaDetailSheet
+import com.telegramtv.ui.mobile.components.MediaPosterCard
+import com.telegramtv.ui.search.SearchViewModel
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileSearchScreen(
     viewModel: SearchViewModel = hiltViewModel(),
     onPlayFile: (Int) -> Unit,
-    onGoToFolder: (Int, String) -> Unit
+    onGoToFolder: ((Int, String) -> Unit)? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
+    var selectedDetailFile by remember { mutableStateOf<FileItem?>(null) }
 
-    var showRenameFileDialog by remember { mutableStateOf<FileItem?>(null) }
-    var showDeleteFileDialog by remember { mutableStateOf<FileItem?>(null) }
-    var showMoveFileDialog by remember { mutableStateOf<FileItem?>(null) }
+    val filteredResults = remember(uiState.results, uiState.activeFilter) {
+        when (uiState.activeFilter) {
+            "MOVIES" -> uiState.results.filter {
+                it.metadata?.mediaType == "movie" || (it.metadata?.mediaType != "episode" && it.fileType == "video")
+            }
+            "SERIES" -> uiState.results.filter {
+                it.metadata?.mediaType == "episode" || it.metadata?.mediaType == "tv" || it.metadata?.season != null
+            }
+            "ACTORS" -> uiState.results.filter {
+                it.metadata?.cast?.isNotEmpty() == true
+            }
+            else -> uiState.results
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MobileBackground)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // Search Header
-        Box(
+        // Search Header Bar
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(MobileHeaderGradientStart, MobileBackground)
-                    )
-                )
-                .padding(16.dp)
-                .statusBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            GlassmorphismSurface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = MobileTextSecondary
-                    )
-                    
-                    Spacer(modifier = Modifier.width(12.dp))
-                    
-                TextField(
-            value = uiState.query,
-            onValueChange = { 
-                Log.d("MobileSearchScreen", "Query changed: $it")
-                viewModel.onQueryChange(it) 
-            },
-            placeholder = { Text("Search files...", color = MobileTextSecondary) },
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent
-            ),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { keyboardController?.hide() }),
-            modifier = Modifier.weight(1f),
-            textStyle = MaterialTheme.typography.bodyLarge.copy(color = MobileTextPrimary)
-        )
-                    
+            OutlinedTextField(
+                value = uiState.query,
+                onValueChange = { viewModel.onQueryChange(it) },
+                placeholder = { Text("Search movies, series, files...") },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.primary)
+                },
+                trailingIcon = {
                     if (uiState.query.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.onQueryChange("") }) {
-                            Icon(Icons.Default.Close, "Clear", tint = MobileTextSecondary)
+                        IconButton(onClick = { viewModel.clearSearch() }) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear")
                         }
                     }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = {
+                    keyboardController?.hide()
+                    if (uiState.query.isNotBlank()) viewModel.addRecentQuery(uiState.query)
+                }),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Filter Chips
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("ALL" to "All", "MOVIES" to "Movies", "SERIES" to "Series", "ACTORS" to "Actors").forEach { (filterKey, label) ->
+                    FilterChip(
+                        selected = uiState.activeFilter == filterKey,
+                        onClick = { viewModel.setActiveFilter(filterKey) },
+                        label = { Text(label) },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    )
                 }
             }
         }
 
+        // Body Content
         if (uiState.isSearching) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MobilePrimary)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else if (uiState.error != null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(uiState.error!!, color = MaterialTheme.colorScheme.error)
             }
-        } else if (uiState.results.isEmpty()) {
-             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                if (uiState.query.isNotEmpty()) {
-                    Text("No results found for \"${uiState.query}\"", color = MobileTextSecondary)
-                } else {
-                    Text("Type to search", color = MobileTextSecondary)
+        } else if (uiState.query.isEmpty()) {
+            // Recent Searches View
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.History,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Recent Searches",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(uiState.recentQueries) { query ->
+                        SuggestionChip(
+                            onClick = {
+                                viewModel.onQueryChange(query)
+                                keyboardController?.hide()
+                            },
+                            label = { Text(query) },
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(48.dp))
+
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "Find movies, series, actors or files",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
+        } else if (filteredResults.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "No results found for \"${uiState.query}\"",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         } else {
-            Log.d("MobileSearchScreen", "Showing ${uiState.results.size} results")
+            // Results Grid
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 150.dp),
+                columns = GridCells.Adaptive(minSize = 110.dp),
                 contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(uiState.results) { file ->
-                     SearchFileCard(
-                        file = file, 
-                        serverUrl = uiState.serverUrl, 
-                        onClick = onPlayFile,
-                        onRename = { showRenameFileDialog = it },
-                        onDelete = { showDeleteFileDialog = it },
-                        onMove = { showMoveFileDialog = it },
-                        onDownload = { viewModel.downloadFile(it) },
-                        onExternalPlayer = { viewModel.openInExternalPlayer(it) },
-                        onCopyPublic = { viewModel.copyPublicLink(it) },
-                        onRevokePublic = { viewModel.revokePublicLink(it) },
-                        onCopyDownload = { viewModel.copyDownloadLink(it) },
-                        onGoToFolder = { 
-                            // folderId might be null for root files, but user wants to 'go to folder'
-                            // Let's assume folderName is "Home" if folderId is null
-                            onGoToFolder(file.folderId ?: -1, "Files") 
-                        }
+                items(filteredResults, key = { it.id }) { file ->
+                    MediaPosterCard(
+                        file = file,
+                        serverUrl = uiState.serverUrl,
+                        onClick = { selectedDetailFile = file }
                     )
                 }
             }
         }
     }
 
-    // --- Dialogs ---
-    if (showRenameFileDialog != null) {
-        InputDialog(
-            title = "Rename File",
-            initialValue = showRenameFileDialog!!.fileName,
-            onDismiss = { showRenameFileDialog = null },
-            onConfirm = { newName ->
-                viewModel.renameFile(showRenameFileDialog!!, newName)
-                showRenameFileDialog = null
-            }
-        )
-    }
-
-    if (showDeleteFileDialog != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteFileDialog = null },
-            title = { Text("Delete File") },
-            text = { Text("Are you sure you want to delete '${showDeleteFileDialog!!.fileName}'?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteFile(showDeleteFileDialog!!)
-                    showDeleteFileDialog = null
-                }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
+    // Media Detail Sheet
+    selectedDetailFile?.let { detailFile ->
+        MediaDetailSheet(
+            file = detailFile,
+            serverUrl = uiState.serverUrl,
+            onDismiss = { selectedDetailFile = null },
+            onPlay = {
+                selectedDetailFile = null
+                onPlayFile(detailFile.id)
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteFileDialog = null }) {
-                    Text("Cancel")
-                }
+            onToggleFavorite = { isFav ->
+                // Update local state if needed
+                selectedDetailFile = detailFile.copy(isFavorite = isFav)
+            },
+            onToggleWatched = { isWatched ->
+                selectedDetailFile = detailFile.copy(watchedState = if (isWatched) "watched" else "unwatched")
             }
-        )
-    }
-
-    if (showMoveFileDialog != null) {
-        MovePickerDialog(
-            title = "Move File",
-            currentFolderId = showMoveFileDialog!!.folderId,
-            folders = uiState.folders,
-            onDismiss = { showMoveFileDialog = null },
-            onConfirm = { targetId ->
-                viewModel.moveFile(showMoveFileDialog!!, targetId)
-                showMoveFileDialog = null
-            }
-        )
-    }
-}
-
-@Composable
-fun SearchFileCard(
-    file: com.telegramtv.data.model.FileItem,
-    serverUrl: String,
-    onClick: (Int) -> Unit,
-    onRename: (FileItem) -> Unit,
-    onDelete: (FileItem) -> Unit,
-    onMove: (FileItem) -> Unit,
-    onDownload: (FileItem) -> Unit,
-    onExternalPlayer: (FileItem) -> Unit,
-    onCopyPublic: (FileItem) -> Unit,
-    onRevokePublic: (FileItem) -> Unit,
-    onCopyDownload: (FileItem) -> Unit,
-    onGoToFolder: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick(file.id) }
-    ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(16f / 9f),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MobileSurface)
-            ) {
-                 coil.compose.AsyncImage(
-                    model = coil.request.ImageRequest.Builder(LocalContext.current)
-                        .data(file.thumbnailUrl?.let { if (it.startsWith("http")) it else "$serverUrl$it" }
-                            ?: "$serverUrl/api/stream/${file.id}/thumbnail")
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-            
-            // Context Menu Overlay
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp)
-            ) {
-                FileOptionsButton(
-                    file = file,
-                    onRename = { onRename(file) },
-                    onDelete = { onDelete(file) },
-                    onMove = { onMove(file) },
-                    onDownload = { onDownload(file) },
-                    onExternalPlayer = { onExternalPlayer(file) },
-                    onCopyPublic = { onCopyPublic(file) },
-                    onRevokePublic = { onRevokePublic(file) },
-                    onCopyDownload = { onCopyDownload(file) },
-                    onGoToFolder = onGoToFolder
-                )
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = file.fileName,
-            color = MobileTextPrimary,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 2,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 4.dp)
         )
     }
 }

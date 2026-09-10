@@ -10,24 +10,25 @@ APK builds are automated via GitHub Actions. When you push a version tag, the wo
 2. Builds a debug APK
 3. Creates a GitHub Release with all APKs attached
 
-### Quick Release
+### Quick Release (Tag-based)
 
 ```bash
-# Tag a new release
-git tag v1.0.0
-git push origin v1.0.0
+# Tag a new release (e.g. v2.0.0)
+git tag v2.0.0
+git push origin v2.0.0
 ```
 
-The GitHub Action will handle the rest!
+The GitHub Action (`.github/workflows/android-release.yml`) will automatically build the APK, generate SHA-256 checksums, and publish the release with `RELEASE_NOTES.md` attached!
 
-### Manual Build
+### Manual Release (GitHub Actions UI)
 
-You can also trigger a build manually:
+You can also trigger a release directly from the GitHub Actions tab:
 
-1. Go to **Actions** → **Build Android TV APK**
+1. Go to **Actions** → **Android APK**
 2. Click **Run workflow**
-3. Optionally specify a version name
-4. Download artifacts when complete
+3. Specify `tag_name` (e.g. `v2.0.0`)
+4. Ensure `create_release` is checked (`true`)
+5. Click **Run workflow**
 
 ## Setting Up APK Signing
 

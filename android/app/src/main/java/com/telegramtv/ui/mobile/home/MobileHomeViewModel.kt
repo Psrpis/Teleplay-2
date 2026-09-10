@@ -332,6 +332,20 @@ class MobileHomeViewModel @Inject constructor(
         }
     }
 
+    fun toggleFavorite(fileId: Int, isFavorite: Boolean) {
+        viewModelScope.launch {
+            filesRepository.toggleFavorite(fileId, isFavorite)
+            refresh()
+        }
+    }
+
+    fun updateWatchedState(fileId: Int, state: String) {
+        viewModelScope.launch {
+            filesRepository.updateWatchedState(fileId, state)
+            refresh()
+        }
+    }
+
     private fun copyToClipboard(label: String, text: String) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText(label, text)
