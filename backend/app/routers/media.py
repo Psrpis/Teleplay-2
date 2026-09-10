@@ -486,6 +486,24 @@ async def list_tags(
     return [TagResponse(id=tag.id, name=tag.name.split(":", 1)[-1], created_at=tag.created_at, file_count=count, kind=_tag_kind(tag.name), value=tag.name) for tag, count in result.all() if not kind or _tag_kind(tag.name) == kind]
 
 
+@router.post("/admin/cleanup-orphaned-tags")
+async def cleanup_orphaned_tags(
+    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    """Remove tags owned by the user that no longer have any file links."""
+    orphaned = await db.execute(
+        select(Tag.id).where(
+            Tag.user_id == current_user.id,
+            ~Tag.id.in_(select(FileTag.tag_id).distinct()),
+        )
+    )
+    tag_ids = [tag_id for tag_id in orphaned.scalars().all()]
+    if tag_ids:
+        await db.execute(delete(Tag).where(Tag.id.in_(tag_ids)))
+        await db.commit()
+    return {"deleted_count": len(tag_ids)}
+
+
 @router.post("/tags", response_model=TagResponse, status_code=status.HTTP_201_CREATED)
 async def create_tag(payload: TagCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     tag = Tag(user_id=current_user.id, name=payload.name.strip().lstrip("#"))

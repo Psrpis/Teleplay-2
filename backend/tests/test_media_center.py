@@ -97,6 +97,7 @@ def test_auto_tag_file_replaces_stale_generated_facets():
 
             rows = (await db.execute(select(Tag.name).join(FileTag).where(FileTag.file_id == file.id))).scalars().all()
             assert stale.name not in rows
+            assert await db.scalar(select(Tag).where(Tag.name == stale.name)) is None
             assert "series:Vixen" in rows
             assert "actor:Megan Mistakes" in rows
             assert file.media_metadata.title == "Vixen"

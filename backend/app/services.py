@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, func, or_
+from sqlalchemy import delete, select, desc, func, or_
 from sqlalchemy.orm import selectinload
 
 from .models import File, WatchProgress, Folder, FileTag, Tag, MediaMetadata
@@ -146,9 +146,18 @@ async def auto_tag_file(db: AsyncSession, file: File) -> dict:
         )
     )
     desired_names = set(tag_names)
+    affected_tags: dict[int, Tag] = {}
     for link, tag in old_links.all():
         if tag.name not in desired_names:
+            affected_tags[tag.id] = tag
             await db.delete(link)
+    await db.flush()
+    for tag in affected_tags.values():
+        link_count = await db.scalar(
+            select(func.count()).select_from(FileTag).where(FileTag.tag_id == tag.id)
+        )
+        if not link_count:
+            await db.execute(delete(Tag).where(Tag.id == tag.id))
     existing_tags = (await db.execute(select(Tag).where(Tag.user_id == file.user_id, Tag.name.in_(tag_names)))).scalars().all() if tag_names else []
     by_name = {tag.name: tag for tag in existing_tags}
     for name in tag_names:
