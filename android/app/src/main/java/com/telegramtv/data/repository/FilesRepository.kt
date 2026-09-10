@@ -395,6 +395,15 @@ class FilesRepository @Inject constructor(
         }
     }
 
+    suspend fun toggleFavorite(fileId: Int, isFavorite: Boolean): Result<Unit> {
+        return setFavorite(fileId, isFavorite)
+    }
+
+    suspend fun updateWatchedState(fileId: Int, state: String): Result<Unit> {
+        val watched = (state == "watched")
+        return setWatched(fileId, watched).map { Unit }
+    }
+
     /**
      * Build streaming URL for a file.
      */

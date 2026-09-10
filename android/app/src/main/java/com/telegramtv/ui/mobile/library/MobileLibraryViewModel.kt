@@ -147,7 +147,7 @@ class MobileLibraryViewModel @Inject constructor(
         _uiState.update { it.copy(selectedCollection = collection, isLoading = true) }
         viewModelScope.launch {
             val result = filesRepository.getFiles(folderId = null)
-            val allFiles = result.getOrNull() ?: emptyList()
+            val allFiles = result.getOrNull()?.items ?: emptyList()
             val filtered = allFiles.filter { collection.fileIds.contains(it.id) }
             _uiState.update { it.copy(collectionFiles = filtered, isLoading = false) }
         }
