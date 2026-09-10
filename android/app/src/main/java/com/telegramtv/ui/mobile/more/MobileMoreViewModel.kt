@@ -117,7 +117,7 @@ class MobileMoreViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val result = filesRepository.getFiles(folderId = null, fileType = "video")
-            val allVideos = result.getOrNull() ?: emptyList()
+            val allVideos = result.getOrNull()?.items ?: emptyList<FileItem>()
             // Filter out files that are explicitly episodes if mediaType == "episode"
             val moviesList = allVideos.filter {
                 it.metadata?.mediaType != "episode" && it.metadata?.mediaType != "tv"
@@ -134,7 +134,7 @@ class MobileMoreViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val result = filesRepository.getFiles(folderId = null, fileType = "video")
-            val allVideos = result.getOrNull() ?: emptyList()
+            val allVideos = result.getOrNull()?.items ?: emptyList<FileItem>()
 
             // Group by series: check metadata.title (or parse file name / metadata.mediaType)
             val seriesMap = mutableMapOf<String, MutableList<FileItem>>()
@@ -193,7 +193,7 @@ class MobileMoreViewModel @Inject constructor(
         _uiState.update { it.copy(selectedActor = actor, isLoading = true) }
         viewModelScope.launch {
             val result = filesRepository.getFiles(folderId = null)
-            val allFiles = result.getOrNull() ?: emptyList()
+            val allFiles = result.getOrNull()?.items ?: emptyList<FileItem>()
             val filtered = allFiles.filter { file ->
                 file.metadata?.cast?.any { it.equals(actor.name, ignoreCase = true) } == true ||
                 file.tags.any { it.equals(actor.name, ignoreCase = true) }
