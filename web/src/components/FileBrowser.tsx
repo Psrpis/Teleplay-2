@@ -2,8 +2,8 @@
  * Main FileBrowser component - the core of the web interface
  */
 import { useEffect, useCallback, useRef, useState } from 'react';
-import { FolderPlus, Grid, List, Search, ChevronRight, Home, RefreshCw, Clipboard, ArrowUp, Film, Music, Image as ImageIcon, FileText, Menu, ArrowDownUp } from 'lucide-react';
-import { FileSort, useFiles, useFolders, useUpdateFile, useUpdateFolder, useDeleteFolder, useDeleteFiles, useMoveFiles, TelegramFile, Folder, useRecentFiles, useContinueWatching, useDeleteFolders, useMoveFolders, usePreferences, useSetPreference } from '../lib/api';
+import { FolderPlus, Grid, List, Search, ChevronRight, Home, RefreshCw, Clipboard, ArrowUp, Film, Music, Image as ImageIcon, FileText, Menu, ArrowDownUp, Trash2 } from 'lucide-react';
+import { FileSort, useFiles, useFolders, useUpdateFile, useUpdateFolder, useDeleteFolder, useDeleteFiles, useMoveFiles, TelegramFile, Folder, useRecentFiles, useContinueWatching, useDeleteFolders, useMoveFolders, usePreferences, useSetPreference, useRemoveContinueWatching, useClearContinueWatching } from '../lib/api';
 import { useAppStore } from '../lib/store';
 import FileCard from './FileCard';
 import FolderCard from './FolderCard';
@@ -84,6 +84,8 @@ export default function FileBrowser() {
     const { data: filesList, isLoading: filesLoading, refetch: refetchFiles } = useFiles(currentFolderId, fileTypeFilter || undefined, searchQuery || undefined, page, sort);
     const { data: recentFiles, isLoading: recentLoading, refetch: refetchRecent } = useRecentFiles(50);
     const { data: cwFiles, isLoading: cwLoading, refetch: refetchCW } = useContinueWatching(50);
+    const removeContinueWatching = useRemoveContinueWatching();
+    const clearContinueWatching = useClearContinueWatching();
     
 
     // For files section, accumulate files from all pages
@@ -547,6 +549,11 @@ export default function FileBrowser() {
 
                     {/* Right: Actions */}
                     <div className="flex items-center gap-2 sm:gap-3">
+                        {activeSection === 'continue_watching' && cwFiles?.files.length ? (
+                            <button onClick={() => clearContinueWatching.mutate()} disabled={clearContinueWatching.isPending} className="btn-secondary inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-red-300" title="Clear Continue Watching">
+                                <Trash2 className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Clear progress</span>
+                            </button>
+                        ) : null}
                         {activeSection === 'files' && (
                             <label className="hidden sm:flex items-center gap-2 rounded-lg border border-white/[0.06] bg-dark-800/50 px-2 text-dark-400" title="Sort files">
                                 <ArrowDownUp className="h-3.5 w-3.5" />
@@ -697,14 +704,16 @@ export default function FileBrowser() {
                                     
                                     {/* Files */}
                                     {displayFiles?.map((file) => (
-                                        <FileCard
-                                            key={file.id}
-                                            file={file}
-                                            viewMode={viewMode}
-                                            selected={selectedFileIds.has(file.id)}
-                                            onSelect={(multi) => selectFile(file.id, multi)}
-                                            onPlay={() => handleFileOpen(file)}
-                                        />
+                                        <div key={file.id} className="group relative min-w-0">
+                                            <FileCard
+                                                file={file}
+                                                viewMode={viewMode}
+                                                selected={selectedFileIds.has(file.id)}
+                                                onSelect={(multi) => selectFile(file.id, multi)}
+                                                onPlay={() => handleFileOpen(file)}
+                                            />
+                                            {activeSection === 'continue_watching' && <button onClick={(event) => { event.stopPropagation(); removeContinueWatching.mutate(file.id); }} className="absolute right-2 top-2 z-10 rounded-lg border border-white/10 bg-dark-950/80 p-1.5 text-dark-300 opacity-0 shadow-lg transition group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-200 focus:opacity-100" title="Remove from Continue Watching"><Trash2 className="h-3.5 w-3.5" /></button>}
+                                        </div>
                                     ))}
                                 </div>
                             ) : (

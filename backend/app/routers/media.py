@@ -314,6 +314,32 @@ async def clear_history(db: AsyncSession = Depends(get_db), current_user: User =
     await db.commit()
 
 
+@router.delete("/continue-watching", status_code=status.HTTP_204_NO_CONTENT)
+async def clear_continue_watching(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Remove all incomplete playback progress from Continue Watching."""
+    await db.execute(
+        delete(WatchProgress).where(
+            WatchProgress.user_id == current_user.id,
+            WatchProgress.completed.is_(False),
+        )
+    )
+    await db.commit()
+
+
+@router.delete("/continue-watching/{file_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_continue_watching(file_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(
+        delete(WatchProgress).where(
+            WatchProgress.file_id == file_id,
+            WatchProgress.user_id == current_user.id,
+            WatchProgress.completed.is_(False),
+        )
+    )
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Continue Watching entry not found")
+    await db.commit()
+
+
 @router.get("/collections", response_model=list[CollectionResponse])
 async def list_collections(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     result = await db.execute(
@@ -482,7 +508,28 @@ async def list_tags(
     kind: Optional[str] = Query(None, pattern="^(series|actor|quality|codec|custom)$"),
     db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
-    result = await db.execute(select(Tag, func.count(FileTag.id)).outerjoin(FileTag).where(Tag.user_id == current_user.id).group_by(Tag.id).order_by(Tag.name))
+    orphan_cleanup = await db.execute(
+        delete(Tag).where(
+            Tag.user_id == current_user.id,
+            or_(
+                Tag.name.like("series:%"),
+                Tag.name.like("actor:%"),
+                Tag.name.like("quality:%"),
+                Tag.name.like("codec:%"),
+            ),
+            ~Tag.id.in_(select(FileTag.tag_id).distinct()),
+        )
+    )
+    if orphan_cleanup.rowcount:
+        await db.commit()
+    result = await db.execute(
+        select(Tag, func.count(FileTag.id))
+        .outerjoin(FileTag)
+        .where(Tag.user_id == current_user.id)
+        .group_by(Tag.id)
+        .having(func.count(FileTag.id) > 0)
+        .order_by(Tag.name)
+    )
     return [TagResponse(id=tag.id, name=tag.name.split(":", 1)[-1], created_at=tag.created_at, file_count=count, kind=_tag_kind(tag.name), value=tag.name) for tag, count in result.all() if not kind or _tag_kind(tag.name) == kind]
 
 

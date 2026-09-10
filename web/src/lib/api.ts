@@ -432,6 +432,26 @@ export const useContinueWatching = (limit = 20) => {
         },
     });
 };
+export const useRemoveContinueWatching = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (fileId: number) => api.delete(`/media/continue-watching/${fileId}`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['files', 'continue-watching'] });
+            queryClient.invalidateQueries({ queryKey: ['media-home'] });
+        },
+    });
+};
+export const useClearContinueWatching = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async () => api.delete('/media/continue-watching'),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['files', 'continue-watching'] });
+            queryClient.invalidateQueries({ queryKey: ['media-home'] });
+        },
+    });
+};
 
 // ============== Media Center Hooks ==============
 
@@ -557,7 +577,10 @@ export const useDeleteHistory = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async (entryId: number) => api.delete(`/media/history/${entryId}`),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['history'] }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['history'] });
+            queryClient.invalidateQueries({ queryKey: ['media-home'] });
+        },
     });
 };
 
@@ -565,7 +588,10 @@ export const useClearHistory = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: async () => api.delete('/media/history'),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['history'] }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['history'] });
+            queryClient.invalidateQueries({ queryKey: ['media-home'] });
+        },
     });
 };
 
