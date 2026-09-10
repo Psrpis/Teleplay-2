@@ -22,14 +22,15 @@ if url.drivername == "postgresql":
 elif url.drivername == "sqlite":
     url = url.set(drivername="sqlite+aiosqlite")
 
-engine = create_async_engine(
-    url, 
-    echo=False,
-    pool_pre_ping=True,
-    pool_recycle=1800,  # Recycle connections every 30 minutes
-    pool_size=40,       # Increased pool size for high concurrency
-    max_overflow=20     # Allow more overflow connections
-)
+engine_kwargs = {
+    "echo": False,
+    "pool_pre_ping": True,
+    "pool_recycle": 1800,
+}
+if url.drivername.startswith("postgresql"):
+    engine_kwargs.update(pool_size=40, max_overflow=20)
+
+engine = create_async_engine(url, **engine_kwargs)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 

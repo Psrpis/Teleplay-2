@@ -2,15 +2,16 @@ import asyncio
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy import select
 
 from app.database import Base
-from app.models import File, WatchProgress
+from app.models import File, WatchProgress, FileTag, Tag, MediaMetadata
 from app.models import Collection, CollectionItem, User
 from app.auth import create_media_token, verify_media_token
 from app.routers.media import bulk_add_collection_items
 from app.routers.files import list_files
 from app.schemas import CollectionBulkAddRequest
-from app.services import add_urls_to_file, classify_media_type, extract_metadata, parse_episode_reference, parse_filename_facets, sanitize_filename
+from app.services import add_urls_to_file, auto_tag_file, classify_media_type, extract_metadata, parse_episode_reference, parse_filename_facets, sanitize_filename
 
 
 def make_file(duration=120):
@@ -56,6 +57,53 @@ def test_parse_filename_facets_separates_series_and_actors():
     assert facets["actors"] == ["A", "B"]
     assert facets["quality"] == "1080p"
     assert facets["codec"] == "hevc"
+
+
+def test_parse_filename_facets_supports_date_based_names_without_regressing_episodes():
+    dated = parse_filename_facets("Vixen_26_01_22_Megan_Mistakes_Cock_Crazy_Boss_Lady_Gets_What_She.mp4")
+    assert dated["series"] == "Vixen"
+    assert dated["actors"] == ["Megan Mistakes"]
+
+    episode = parse_filename_facets("Breaking.Bad.S01E01.1080p.BluRay.x264.mkv")
+    assert episode["series"] == "Breaking Bad"
+    assert episode["season"] == 1
+    assert episode["episode"] == 1
+    assert episode["actors"] == []
+    assert parse_filename_facets("Family.Reunion.2024.mp4")["series"] == "Family Reunion 2024"
+
+
+def test_auto_tag_file_replaces_stale_generated_facets():
+    async def run_test():
+        engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+        async with session_factory() as db:
+            file = File(
+                id=30, user_id=3, file_id="tagged", file_unique_id="tagged",
+                channel_message_id=30,
+                file_name="Vixen_26_01_22_Megan_Mistakes_Cock_Crazy_Boss_Lady_Gets_What_She.mp4",
+                file_size=10, file_type="video",
+            )
+            stale = Tag(user_id=3, name="series:Vixen 26 01 22 Megan Mistakes Cock Crazy Boss Lady Gets What She")
+            file.tag_links = [FileTag(tag=stale)]
+            file.media_metadata = MediaMetadata(title=stale.name.removeprefix("series:"), media_type="movie")
+            db.add(file)
+            await db.commit()
+
+            await auto_tag_file(db, file)
+            await db.commit()
+
+            rows = (await db.execute(select(Tag.name).join(FileTag).where(FileTag.file_id == file.id))).scalars().all()
+            assert stale.name not in rows
+            assert "series:Vixen" in rows
+            assert "actor:Megan Mistakes" in rows
+            assert file.media_metadata.title == "Vixen"
+
+        await engine.dispose()
+
+    asyncio.run(run_test())
 
 
 def test_document_media_classification_uses_mime_and_extension():

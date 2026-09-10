@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc, func
+from sqlalchemy import select, desc, func, or_
 from sqlalchemy.orm import selectinload
 
 from .models import File, WatchProgress, Folder, FileTag, Tag, MediaMetadata
@@ -80,7 +80,13 @@ def parse_filename_facets(file_name: str) -> dict:
         r"(?i)\b(?:2160p|1080p|1440p|720p|480p|4k|8k|x264|x265|h264|h265|hevc|avc|web[- ]?dl|webrip|bluray|brrip|hdr10?|aac|dts|truehd|proper|repack|remux|prt)\b"
     )
     technical_match = technical.search(normalized)
-    content = normalized[:technical_match.start()].strip(" .-_") if technical_match else normalized
+    content = normalized[:technical_match.start()].strip(" ._-") if technical_match else normalized
+    date_match = re.search(r"\b\d{1,2}[. _-]\d{1,2}[. _-](?:19|20)?\d{2}\b", content)
+    date_content = content
+    after_date = ""
+    if date_match:
+        date_content = content[:date_match.start()].strip(" ._-")
+        after_date = content[date_match.end():].strip(" ._-")
     actor_match = re.search(r"(?i)(?:oyuncu|\bcast\b|\bstarring\b|\bbaşrol\b)\s*[:=-]?\s*(.+)$", content)
     actors: list[str] = []
     if actor_match:
@@ -89,8 +95,13 @@ def parse_filename_facets(file_name: str) -> dict:
         actors = [
             re.sub(r"\s+", " ", item).strip(" .-_")
             for item in re.split(r"(?i)\s+(?:and|ve)\s+|\s*&\s*|[,;/]+", actor_text)
-            if len(item.strip(" .-_")) >= 1
+            if len(item.strip(" ._-")) >= 1
         ]
+    elif date_match and after_date:
+        after_words = after_date.split()
+        if len(after_words) > 3:
+            actors = [" ".join(after_words[:2])]
+        content = date_content
     if episode:
         series_title = episode["title"]
         content = re.sub(r"(?i)[. _-]*s\d{1,2}e\d{1,3}.*$|[. _-]*\d{1,2}x\d{1,3}.*$", "", content).strip(" .-_")
@@ -121,6 +132,23 @@ async def auto_tag_file(db: AsyncSession, file: File) -> dict:
         tag_names.append(f"quality:{facets['quality']}")
     if facets["codec"]:
         tag_names.append(f"codec:{facets['codec']}")
+    old_links = await db.execute(
+        select(FileTag, Tag)
+        .join(FileTag.tag)
+        .where(
+            FileTag.file_id == file.id,
+            or_(
+                Tag.name.like("series:%"),
+                Tag.name.like("actor:%"),
+                Tag.name.like("quality:%"),
+                Tag.name.like("codec:%"),
+            ),
+        )
+    )
+    desired_names = set(tag_names)
+    for link, tag in old_links.all():
+        if tag.name not in desired_names:
+            await db.delete(link)
     existing_tags = (await db.execute(select(Tag).where(Tag.user_id == file.user_id, Tag.name.in_(tag_names)))).scalars().all() if tag_names else []
     by_name = {tag.name: tag for tag in existing_tags}
     for name in tag_names:
@@ -138,11 +166,11 @@ async def auto_tag_file(db: AsyncSession, file: File) -> dict:
     if facets["series"] and not metadata:
         metadata = MediaMetadata(file_id=file.id, title=facets["series"], media_type="series" if facets["season"] else "movie", season=facets["season"], episode=facets["episode"])
         db.add(metadata)
-    elif metadata and facets["series"]:
-        metadata.title = metadata.title or facets["series"]
-        metadata.media_type = metadata.media_type or ("series" if facets["season"] else "movie")
-        metadata.season = metadata.season or facets["season"]
-        metadata.episode = metadata.episode or facets["episode"]
+    elif metadata:
+        metadata.title = facets["series"]
+        metadata.media_type = "series" if facets["season"] else "movie"
+        metadata.season = facets["season"]
+        metadata.episode = facets["episode"]
     return {**facets, "tags": tag_names}
 
 def sanitize_filename(name: str) -> str:
