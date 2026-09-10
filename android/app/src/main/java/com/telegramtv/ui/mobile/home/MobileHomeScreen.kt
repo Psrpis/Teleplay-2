@@ -690,7 +690,7 @@ fun HomeHeroBanner(
                     ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (file.hasProgress) "Resume" else "Play", fontSize = 13.sp)
+                        Text(if ((file.progressPercent ?: 0f) > 0f) "Resume" else "Play", fontSize = 13.sp)
                     }
 
                     OutlinedButton(
@@ -712,7 +712,7 @@ fun HomeHeroBanner(
 
 @Composable
 fun ContinueWatchingCard(file: FileItem, serverUrl: String, onClick: (Int) -> Unit) {
-    val progress = (file.progressPercent ?: 0) / 100f
+    val progress = ((file.progressPercent ?: 0f) / 100f).coerceIn(0f, 1f)
     val imagePath = file.effectiveBackdropUrl ?: file.effectivePosterUrl ?: file.thumbnailUrl
     val imageUrl = imagePath?.let { if (it.startsWith("http")) it else "${serverUrl.trimEnd('/')}/$it" }
         ?: "${serverUrl.trimEnd('/')}/api/stream/${file.id}/thumbnail"

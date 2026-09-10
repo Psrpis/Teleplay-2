@@ -257,6 +257,15 @@ class MobileMoreViewModel @Inject constructor(
         }
     }
 
+    fun updateWatchedState(fileId: Int, state: String) {
+        viewModelScope.launch {
+            filesRepository.updateWatchedState(fileId, state)
+            if (_uiState.value.selectedDetailFile?.id == fileId) {
+                _uiState.update { it.copy(selectedDetailFile = it.selectedDetailFile?.copy(watchedState = state)) }
+            }
+        }
+    }
+
     fun saveServerUrl(url: String) {
         viewModelScope.launch {
             settingsRepository.setServerUrl(url)
