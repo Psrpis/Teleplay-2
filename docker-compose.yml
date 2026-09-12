@@ -55,6 +55,11 @@ services:
       TELEGRAM_API_HASH: ${TELEGRAM_API_HASH}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       TELEGRAM_STORAGE_CHANNEL_ID: ${TELEGRAM_STORAGE_CHANNEL_ID}
+      TELEGRAM_HELPER_BOT_TOKENS: ${TELEGRAM_HELPER_BOT_TOKENS:-}
+
+      # Access control — restricts the bot to these Telegram user IDs
+      # (comma-separated). Left empty, the bot is open to everyone.
+      AUTH_USERS: ${AUTH_USERS:-}
 
       # Security
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}

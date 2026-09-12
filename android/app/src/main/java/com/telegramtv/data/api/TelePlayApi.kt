@@ -34,7 +34,7 @@ interface TelePlayApi {
     /**
      * Logout and invalidate tokens.
      */
-    @POST("auth/logout")
+    @POST("auth/logout-all")
     suspend fun logout(): Response<Unit>
 
     /**
