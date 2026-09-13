@@ -75,14 +75,12 @@ val ExpressiveShapes = Shapes(
 fun TelePlayMobileTheme(
     content: @Composable () -> Unit
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
     val view = androidx.compose.ui.platform.LocalView.current
     
-    val colorScheme = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-        androidx.compose.material3.dynamicDarkColorScheme(context)
-    } else {
-        MobileColorScheme
-    }
+    // Force the branded "Emerald Premium" theme rather than Android 12+'s
+    // wallpaper-derived dynamic color — otherwise this palette silently
+    // never shows up on most modern phones.
+    val colorScheme = MobileColorScheme
 
     if (!view.isInEditMode) {
         androidx.compose.runtime.SideEffect {

@@ -98,11 +98,11 @@ fun MediaDetailSheet(
                         .padding(horizontal = 20.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.Bottom
                 ) {
-                    // Small Poster
+                    // Landscape thumbnail used consistently across the app
                     Box(
                         modifier = Modifier
-                            .width(80.dp)
-                            .aspectRatio(2f / 3f)
+                            .width(120.dp)
+                            .aspectRatio(16f / 9f)
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color.DarkGray)
                     ) {

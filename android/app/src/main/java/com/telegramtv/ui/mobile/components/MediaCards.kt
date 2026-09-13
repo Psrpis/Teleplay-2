@@ -26,7 +26,7 @@ import coil.request.ImageRequest
 import com.telegramtv.data.model.FileItem
 
 /**
- * Standard vertical Poster Card for Movies, Series, and Library items.
+ * Standard landscape media card for Movies, Series, and Library items.
  */
 @Composable
 fun MediaPosterCard(
@@ -43,15 +43,15 @@ fun MediaPosterCard(
 
     Column(
         modifier = modifier
-            .width(130.dp)
+            .width(184.dp)
             .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
     ) {
-        // Poster Box with Aspect Ratio 2:3
+        // Landscape thumbnail shared by every media collection.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(2f / 3f)
+                .aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {

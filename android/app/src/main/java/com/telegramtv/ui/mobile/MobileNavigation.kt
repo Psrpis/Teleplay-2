@@ -20,7 +20,6 @@ import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -109,14 +108,9 @@ fun MainAppScreen(
     val tabNavController = rememberNavController()
     val navBackStackEntry by tabNavController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val isTablet = LocalConfiguration.current.screenWidthDp >= 600
-
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        contentWindowInsets = WindowInsets(0.dp),
-        bottomBar = {
-            if (!isTablet) GlassmorphismBottomNavigation(tabNavController, currentRoute)
-        }
+        contentWindowInsets = WindowInsets(0.dp)
     ) { innerPadding ->
         val navHost: @Composable () -> Unit = {
             NavHost(
@@ -192,13 +186,9 @@ fun MainAppScreen(
             }
         }
 
-        if (isTablet) {
-            Row(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                TabletNavigationRail(tabNavController, currentRoute)
-                navHost()
-            }
-        } else {
-            Box(modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding).fillMaxSize()) {
+        Row(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            CompactNavigationRail(tabNavController, currentRoute)
+            Box(modifier = Modifier.consumeWindowInsets(innerPadding).fillMaxSize()) {
                 navHost()
             }
         }
@@ -206,8 +196,12 @@ fun MainAppScreen(
 }
 
 @Composable
-private fun TabletNavigationRail(navController: NavHostController, currentRoute: String?) {
-    NavigationRail(containerColor = MaterialTheme.colorScheme.surface) {
+private fun CompactNavigationRail(navController: NavHostController, currentRoute: String?) {
+    NavigationRail(
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.width(58.dp)
+    ) {
         listOf(
             BottomNavItem.Home,
             BottomNavItem.Search,
@@ -225,7 +219,12 @@ private fun TabletNavigationRail(navController: NavHostController, currentRoute:
                     }
                 },
                 icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, item.title) },
-                label = { Text(item.title) }
+                alwaysShowLabel = false,
+                colors = NavigationRailItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                )
             )
         }
     }

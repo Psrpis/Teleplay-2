@@ -22,7 +22,7 @@ export function SearchPage() {
 
 export function FavoritesPage() {
     const { data, isLoading } = useFavorites();
-    return <Shell title="Favorites" eyebrow="Your shortlist"><div className="mb-8 rounded-3xl border border-primary-400/15 bg-[radial-gradient(circle_at_80%_20%,rgba(168,85,247,.2),transparent_38%),rgba(255,255,255,.03)] p-6 sm:p-8"><p className="text-sm text-primary-200">Keep the essentials close</p><h2 className="mt-2 text-3xl font-bold">Favorites</h2><p className="mt-2 max-w-lg text-sm leading-6 text-dark-400">Media you’ve saved for the next great night in.</p></div><FavoriteGrid isLoading={isLoading} files={data || []} /></Shell>;
+    return <Shell title="Favorites" eyebrow="Your shortlist"><div className="mb-8 rounded-3xl border border-primary-400/15 bg-[radial-gradient(circle_at_80%_20%,rgba(62,207,142,.2),transparent_38%),rgba(255,255,255,.03)] p-6 sm:p-8"><p className="text-sm text-primary-200">Keep the essentials close</p><h2 className="mt-2 text-3xl font-bold">Favorites</h2><p className="mt-2 max-w-lg text-sm leading-6 text-dark-400">Media you’ve saved for the next great night in.</p></div><FavoriteGrid isLoading={isLoading} files={data || []} /></Shell>;
 }
 
 function FavoriteGrid({ isLoading, files }: { isLoading: boolean; files: any[] }) { return <div>{isLoading ? <p className="text-dark-400">Loading favorites…</p> : files.length ? <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">{files.map((file) => <MediaCard key={file.id} file={file} />)}</div> : <div className="rounded-2xl border border-dashed border-white/10 p-12 text-center text-dark-500">No favorites yet. Use the heart on a media card to save one.</div>}</div>; }

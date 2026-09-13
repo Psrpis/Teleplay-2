@@ -64,25 +64,25 @@ val TVDownloadComplete = Color(0xFF69F0AE)
 
 // ── Mobile Modern Color System ──────────────────────────────────────
 
-// Backgrounds (Darker, deeper)
-val MobileBackground = Color(0xFF050505)
-val MobileSurface = Color(0xFF101010)
-val MobileSurfaceTransparent = Color(0xCC101010)
+// Backgrounds (Darker, deeper — emerald-black)
+val MobileBackground = Color(0xFF06110D)
+val MobileSurface = Color(0xFF0D1F18)
+val MobileSurfaceTransparent = Color(0xCC0D1F18)
 
-// Accents (Neon/Vibrant)
-val MobilePrimary = Color(0xFF6C63FF) // Modern Purple-Blue
-val MobileSecondary = Color(0xFF00BFA5) // Teal accent
-val MobileAccent = Color(0xFFFF6584) // Pink/Salmon for highlights
+// Accents ("Emerald Premium")
+val MobilePrimary = Color(0xFF3ECF8E) // Emerald accent
+val MobileSecondary = Color(0xFF2DD4BF) // Teal complement
+val MobileAccent = Color(0xFFE0576A) // Warm contrast for favorites/alerts
 
 // Gradients
-val MobileGradientStart = Color(0xFF6C63FF)
-val MobileGradientEnd = Color(0xFF3F3D56)
-val MobileHeaderGradientStart = Color(0xFF2E3440)
-val MobileHeaderGradientEnd = Color(0xFF050505)
+val MobileGradientStart = Color(0xFF22B876)
+val MobileGradientEnd = Color(0xFF0D1F18)
+val MobileHeaderGradientStart = Color(0xFF0D1F18)
+val MobileHeaderGradientEnd = Color(0xFF06110D)
 
 // Text
-val MobileTextPrimary = Color(0xFFFFFFFF)
-val MobileTextSecondary = Color(0xFFB3B3B3)
+val MobileTextPrimary = Color(0xFFEAFAF2)
+val MobileTextSecondary = Color(0xFF9FB3A9)
 
 // Glassmorphism
-val GlassCorrectionColor = Color(0xFF1E1E1E) // Fallback or tint
+val GlassCorrectionColor = Color(0xFF122019) // Fallback or tint

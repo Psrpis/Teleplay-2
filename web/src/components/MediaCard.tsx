@@ -24,18 +24,18 @@ export default function MediaCard({ file, compact = false }: MediaCardProps) {
     const isPlayable = file.file_type === 'video' || file.file_type === 'audio';
 
     return (
-        <article className={`group relative shrink-0 ${compact ? 'w-36 sm:w-44' : 'w-44 sm:w-52 md:w-56'}`}>
+        <article className={`group relative shrink-0 ${compact ? 'w-52 sm:w-60' : 'w-60 sm:w-72 md:w-80'}`}>
             <button
                 type="button"
                 className="w-full text-left focus-ring"
                 onClick={() => isPlayable && setPreviewFile(file)}
                 aria-label={`Play ${title}`}
             >
-                <div className="relative aspect-[2/3] overflow-hidden rounded-2xl border border-white/[0.08] bg-dark-800 shadow-lg shadow-black/20 transition duration-300 group-hover:-translate-y-1 group-hover:border-primary-400/40 group-hover:shadow-primary-950/40">
+                <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/[0.08] bg-dark-800 shadow-lg shadow-black/20 transition duration-300 group-hover:-translate-y-1 group-hover:border-primary-400/40 group-hover:shadow-primary-950/40">
                     {artwork ? (
                         <img src={artwork} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
                     ) : (
-                        <div className="flex h-full items-end bg-[radial-gradient(circle_at_top,#5b21b6,#111827_58%,#020617)] p-4">
+                        <div className="flex h-full items-end bg-[radial-gradient(circle_at_top,#147d51,#0d1f18_58%,#030805)] p-4">
                             <span className="line-clamp-3 text-left text-lg font-semibold text-white">{title}</span>
                         </div>
                     )}
