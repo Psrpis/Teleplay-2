@@ -19,6 +19,7 @@ import androidx.compose.ui.zIndex
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -333,11 +334,27 @@ fun MobilePlayerScreen(
                         }
                     }
                 }
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { 
-                    if (uiState.showControls) viewModel.hideControls() else viewModel.showControls() 
+                .pointerInput(Unit) {
+                    val containerWidth = size.width.toFloat()
+                    detectTapGestures(
+                        onTap = {
+                            if (uiState.showControls) viewModel.hideControls() else viewModel.showControls()
+                        },
+                        onDoubleTap = { offset ->
+                            val seekAmountMs = 10_000L
+                            val current = viewModel.uiState.value.currentPosition
+                            val duration = viewModel.uiState.value.duration
+                            if (offset.x < containerWidth / 2f) {
+                                val newPos = (current - seekAmountMs).coerceAtLeast(0)
+                                viewModel.seekTo(newPos)
+                                showGestureFeedback("-10s (${formatTime(newPos)})", Icons.Filled.Replay10)
+                            } else {
+                                val newPos = (current + seekAmountMs).coerceAtMost(duration)
+                                viewModel.seekTo(newPos)
+                                showGestureFeedback("+10s (${formatTime(newPos)})", Icons.Filled.Forward10)
+                            }
+                        }
+                    )
                 }
         )
     }
