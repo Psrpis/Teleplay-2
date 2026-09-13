@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ArrowLeft, Clapperboard, Menu, Search, UserRound } from 'lucide-react';
 import { useAutoTagLibrary, useMediaSearch, useMediaTags, MediaTag } from '../lib/api';
 import Sidebar from './Sidebar';
-import MobileTabBar from './MobileTabBar';
+import NavRail from './NavRail';
 import MediaCard from './MediaCard';
 import Toasts from './Toasts';
 
@@ -30,7 +30,7 @@ export default function TagBrowserPage({ kind }: { kind: 'series' | 'actor' }) {
     return (
         <div className="min-h-screen bg-dark-950 text-white">
             <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-            <main className={`min-h-screen transition-[margin] duration-300 ${sidebarOpen ? 'md:ml-64' : ''}`}>
+            <main className={`min-h-screen pl-[52px] transition-[margin] duration-300 ${sidebarOpen ? 'md:ml-64' : ''}`}>
                 <header className="flex h-16 items-center gap-4 border-b border-white/[0.06] px-4 sm:px-8">
                     <button onClick={() => setSidebarOpen((value) => !value)} className="rounded-xl p-2 text-dark-400 hover:bg-white/5 hover:text-white"><Menu className="h-5 w-5" /></button>
                     <div className="flex items-center gap-3"><div className="rounded-xl bg-primary-500/15 p-2 text-primary-200"><Icon className="h-5 w-5" /></div><div><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary-300/80">Auto-organized</p><h1 className="text-lg font-semibold">{isSeries ? 'Series' : 'Actors'}</h1></div></div>
@@ -61,7 +61,7 @@ export default function TagBrowserPage({ kind }: { kind: 'series' | 'actor' }) {
                     )}
                 </div>
             </main>
-            <MobileTabBar />
+            <NavRail />
             <Toasts />
         </div>
     );

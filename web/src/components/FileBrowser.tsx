@@ -12,7 +12,7 @@ import MoveFileModal from './MoveFileModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
 import RenameModal from './RenameModal';
 import Sidebar from './Sidebar';
-import MobileTabBar from './MobileTabBar';
+import NavRail from './NavRail';
 import Toasts from './Toasts';
 
 const FILE_SORT_OPTIONS: Array<{ value: FileSort; label: string }> = [
@@ -499,7 +499,7 @@ export default function FileBrowser() {
         <div className="flex h-screen bg-dark-950 text-white selection:bg-primary-500/30 overflow-hidden">
             <Sidebar isOpen={isSidebarOpen} onClose={() => setSidebarOpen(false)} />
             
-            <main className={`flex-1 flex flex-col min-w-0 relative bg-gradient-to-br from-dark-950 to-dark-900 transition-[margin] duration-300 ease-in-out ${isSidebarOpen ? 'md:ml-64' : 'ml-0'}`}>
+            <main className={`flex-1 flex flex-col min-w-0 relative bg-gradient-to-br from-dark-950 to-dark-900 transition-[margin] duration-300 ease-in-out pl-[52px] ${isSidebarOpen ? 'md:ml-64' : 'ml-0'}`}>
                 {/* Header */}
                 <header className="h-16 border-b border-white/[0.06] flex items-center justify-between px-4 sm:px-6 bg-dark-900/50 backdrop-blur-sm z-30 sticky top-0">
                     {/* Left: Hamburger & Search & Breadcrumbs */}
@@ -758,7 +758,7 @@ export default function FileBrowser() {
                     )}
                 </div>
             </main>
-            <MobileTabBar />
+            <NavRail />
             <Toasts />
 
             {/* Modals */}

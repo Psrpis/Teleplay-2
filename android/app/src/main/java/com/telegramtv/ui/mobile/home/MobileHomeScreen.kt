@@ -99,7 +99,6 @@ fun MobileHomeScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(top = if (uiState.isMultiSelectMode) 64.dp else 0.dp, bottom = 100.dp) // Space for CAB and bottom nav
         ) {
-            // ... (rest of LazyColumn items)
             // 1. Header with Gradient
             item {
                 HomeHeader(
@@ -301,6 +300,22 @@ fun MobileHomeScreen(
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MobilePrimary
         )
+
+        // Floating resume shortcut — only on the Home tab's root, and only
+        // when there's actually something to resume.
+        val resumeFile = uiState.continueWatching.firstOrNull()
+        if (uiState.currentFolderId == null && resumeFile != null && !uiState.isMultiSelectMode) {
+            ExtendedFloatingActionButton(
+                onClick = { onPlayFile(resumeFile.id) },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+                containerColor = Color.White,
+                contentColor = Color.Black,
+                icon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
+                text = { Text("Resume") }
+            )
+        }
     }
     
     // --- DIALOGS ---

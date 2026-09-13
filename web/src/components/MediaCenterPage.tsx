@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMediaHome, useSetWatched, useSurpriseMe, useToggleFavorite, TelegramFile } from '../lib/api';
 import { useAppStore } from '../lib/store';
 import Sidebar from './Sidebar';
-import MobileTabBar from './MobileTabBar';
+import NavRail from './NavRail';
 import MediaCard from './MediaCard';
 import Toasts from './Toasts';
 
@@ -42,7 +42,7 @@ export default function MediaCenterPage() {
     return (
         <div className="min-h-screen bg-dark-950 text-white">
             <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-            <main className={`min-h-screen transition-[margin] duration-300 ${sidebarOpen ? 'md:ml-64' : ''}`}>
+            <main className={`min-h-screen pl-[52px] transition-[margin] duration-300 ${sidebarOpen ? 'md:ml-64' : ''}`}>
                 <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-white/[0.06] bg-dark-950/80 px-4 backdrop-blur-xl sm:px-8">
                     <button onClick={() => setSidebarOpen((value) => !value)} className="rounded-xl p-2 text-dark-400 hover:bg-white/5 hover:text-white"><Menu className="h-5 w-5" /></button>
                     <form onSubmit={runSearch} className="relative max-w-xl flex-1">
@@ -80,7 +80,15 @@ export default function MediaCenterPage() {
                     </div>
                 )}
             </main>
-            <MobileTabBar />
+            <NavRail />
+            {!isLoading && (data?.continue_watching?.length ?? 0) > 0 && (
+                <button
+                    onClick={() => play(data!.continue_watching[0])}
+                    className="fixed bottom-6 right-6 z-30 flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-medium text-dark-950 shadow-lg shadow-black/30 transition hover:bg-dark-100"
+                >
+                    <Play className="h-3.5 w-3.5 fill-current" /> Resume
+                </button>
+            )}
             <Toasts />
         </div>
     );

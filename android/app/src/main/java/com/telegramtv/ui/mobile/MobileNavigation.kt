@@ -20,7 +20,6 @@ import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -109,14 +108,10 @@ fun MainAppScreen(
     val tabNavController = rememberNavController()
     val navBackStackEntry by tabNavController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val isTablet = LocalConfiguration.current.screenWidthDp >= 600
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        contentWindowInsets = WindowInsets(0.dp),
-        bottomBar = {
-            if (!isTablet) GlassmorphismBottomNavigation(tabNavController, currentRoute)
-        }
+        contentWindowInsets = WindowInsets(0.dp)
     ) { innerPadding ->
         val navHost: @Composable () -> Unit = {
             NavHost(
@@ -192,13 +187,12 @@ fun MainAppScreen(
             }
         }
 
-        if (isTablet) {
-            Row(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                TabletNavigationRail(tabNavController, currentRoute)
-                navHost()
-            }
-        } else {
-            Box(modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding).fillMaxSize()) {
+        // The side rail is now the permanent navigation surface on every
+        // width (phones included) rather than only ≥600dp — matches the
+        // approved "persistent rail" layout used on the web app.
+        Row(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            NavRail(tabNavController, currentRoute)
+            Box(modifier = Modifier.consumeWindowInsets(innerPadding).fillMaxSize()) {
                 navHost()
             }
         }
@@ -206,7 +200,7 @@ fun MainAppScreen(
 }
 
 @Composable
-private fun TabletNavigationRail(navController: NavHostController, currentRoute: String?) {
+private fun NavRail(navController: NavHostController, currentRoute: String?) {
     NavigationRail(containerColor = MaterialTheme.colorScheme.surface) {
         listOf(
             BottomNavItem.Home,
@@ -226,58 +220,6 @@ private fun TabletNavigationRail(navController: NavHostController, currentRoute:
                 },
                 icon = { Icon(if (selected) item.selectedIcon else item.unselectedIcon, item.title) },
                 label = { Text(item.title) }
-            )
-        }
-    }
-}
-
-@Composable
-fun GlassmorphismBottomNavigation(
-    navController: NavHostController,
-    currentRoute: String?
-) {
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-        tonalElevation = 3.dp,
-        modifier = Modifier
-    ) {
-        val items = listOf(
-            BottomNavItem.Home,
-            BottomNavItem.Search,
-            BottomNavItem.Library,
-            BottomNavItem.More
-        )
-
-        items.forEach { item ->
-            val isSelected = currentRoute?.startsWith(item.route) == true
-            NavigationBarItem(
-                selected = isSelected,
-                onClick = {
-                    navController.navigate(item.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-                icon = {
-                    Icon(
-                        imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                        contentDescription = item.title,
-                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                label = {
-                    Text(
-                        text = item.title,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                )
             )
         }
     }
