@@ -38,15 +38,15 @@ fun MediaDetailSheet(
 ) {
     val modalBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    val backdropUrl = file.effectiveBackdropUrl?.let { url ->
+    val backdropUrl = (file.thumbnailUrl ?: file.effectiveBackdropUrl ?: file.effectivePosterUrl)?.let { url ->
         if (url.startsWith("http://") || url.startsWith("https://")) url
         else "${serverUrl.trimEnd('/')}/$url"
-    }
+    } ?: "${serverUrl.trimEnd('/')}/api/stream/${file.id}/thumbnail"
 
-    val posterUrl = file.effectivePosterUrl?.let { url ->
+    val posterUrl = (file.thumbnailUrl ?: file.effectivePosterUrl)?.let { url ->
         if (url.startsWith("http://") || url.startsWith("https://")) url
         else "${serverUrl.trimEnd('/')}/$url"
-    }
+    } ?: "${serverUrl.trimEnd('/')}/api/stream/${file.id}/thumbnail"
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,

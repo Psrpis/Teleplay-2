@@ -179,10 +179,10 @@ fun MobileMoreScreen(
                 },
                 text = {
                     Column {
-                        val poster = (surprise.effectiveBackdropUrl ?: surprise.effectivePosterUrl)?.let { url ->
+                        val poster = (surprise.thumbnailUrl ?: surprise.effectiveBackdropUrl ?: surprise.effectivePosterUrl)?.let { url ->
                             if (url.startsWith("http://") || url.startsWith("https://")) url
                             else "${uiState.serverUrl.trimEnd('/')}/$url"
-                        }
+                        } ?: "${uiState.serverUrl.trimEnd('/')}/api/stream/${surprise.id}/thumbnail"
                         if (poster != null) {
                             Box(
                                 modifier = Modifier

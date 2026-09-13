@@ -160,7 +160,8 @@ class MobileMoreViewModel @Inject constructor(
 
             val seriesInfoList = seriesMap.map { (name, episodes) ->
                 val seasonsGrouped = episodes.groupBy { it.metadata?.season ?: 1 }
-                val poster = episodes.firstOrNull()?.effectivePosterUrl
+                val poster = episodes.firstOrNull()?.thumbnailUrl
+                    ?: episodes.firstOrNull()?.effectivePosterUrl
                 SeriesInfo(
                     name = name,
                     totalEpisodes = episodes.size,

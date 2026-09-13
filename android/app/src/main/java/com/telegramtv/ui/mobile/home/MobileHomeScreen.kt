@@ -623,7 +623,7 @@ fun HomeHeroBanner(
     onPlayClick: () -> Unit,
     onDetailClick: () -> Unit
 ) {
-    val backdrop = (file.effectiveBackdropUrl ?: file.effectivePosterUrl)?.let { url ->
+    val backdrop = (file.thumbnailUrl ?: file.effectiveBackdropUrl ?: file.effectivePosterUrl)?.let { url ->
         if (url.startsWith("http")) url else "${serverUrl.trimEnd('/')}/$url"
     } ?: "${serverUrl.trimEnd('/')}/api/stream/${file.id}/thumbnail"
 
@@ -713,7 +713,7 @@ fun HomeHeroBanner(
 @Composable
 fun ContinueWatchingCard(file: FileItem, serverUrl: String, onClick: (Int) -> Unit) {
     val progress = ((file.progressPercent ?: 0f) / 100f).coerceIn(0f, 1f)
-    val imagePath = file.effectiveBackdropUrl ?: file.effectivePosterUrl ?: file.thumbnailUrl
+    val imagePath = file.thumbnailUrl ?: file.effectiveBackdropUrl ?: file.effectivePosterUrl
     val imageUrl = imagePath?.let { if (it.startsWith("http")) it else "${serverUrl.trimEnd('/')}/$it" }
         ?: "${serverUrl.trimEnd('/')}/api/stream/${file.id}/thumbnail"
 

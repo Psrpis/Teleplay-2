@@ -8,10 +8,10 @@ interface MediaCardProps {
 }
 
 function artworkFor(file: TelegramFile) {
-    const source = file.metadata?.poster_url || file.thumbnail_url;
-    if (!source) return null;
+    const source = file.thumbnail_url || `/api/stream/${file.id}/thumbnail`;
     if (source.startsWith('http')) return source;
-    return `${window.location.origin}${source}`;
+    if (source.startsWith('/')) return `${window.location.origin}${source}`;
+    return `${window.location.origin}/${source}`;
 }
 
 export default function MediaCard({ file, compact = false }: MediaCardProps) {

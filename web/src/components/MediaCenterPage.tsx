@@ -9,7 +9,7 @@ import MediaCard from './MediaCard';
 import Toasts from './Toasts';
 
 function artwork(file: TelegramFile | null) {
-    const source = file?.metadata?.backdrop_url || file?.metadata?.poster_url || file?.thumbnail_url;
+    const source = file ? (file.thumbnail_url || `/api/stream/${file.id}/thumbnail`) : undefined;
     if (!source) return undefined;
     if (source.startsWith('http')) return source;
     return `${window.location.origin}${source}`;

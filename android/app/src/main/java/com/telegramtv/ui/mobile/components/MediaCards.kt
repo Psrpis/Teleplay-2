@@ -36,10 +36,10 @@ fun MediaPosterCard(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null
 ) {
-    val posterUrl = file.effectivePosterUrl?.let { url ->
+    val posterUrl = (file.thumbnailUrl ?: file.effectivePosterUrl)?.let { url ->
         if (url.startsWith("http://") || url.startsWith("https://")) url
         else "${serverUrl.trimEnd('/')}/$url"
-    }
+    } ?: "${serverUrl.trimEnd('/')}/api/stream/${file.id}/thumbnail"
 
     Column(
         modifier = modifier
@@ -174,10 +174,10 @@ fun MediaWideCard(
     onDeleteClick: (() -> Unit)? = null,
     progressLabel: String? = null
 ) {
-    val thumbUrl = (file.effectiveBackdropUrl ?: file.effectivePosterUrl)?.let { url ->
+    val thumbUrl = (file.thumbnailUrl ?: file.effectiveBackdropUrl ?: file.effectivePosterUrl)?.let { url ->
         if (url.startsWith("http://") || url.startsWith("https://")) url
         else "${serverUrl.trimEnd('/')}/$url"
-    }
+    } ?: "${serverUrl.trimEnd('/')}/api/stream/${file.id}/thumbnail"
 
     Card(
         shape = RoundedCornerShape(14.dp),
