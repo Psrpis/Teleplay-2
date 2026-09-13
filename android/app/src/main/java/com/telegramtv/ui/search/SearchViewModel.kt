@@ -93,7 +93,9 @@ class SearchViewModel @Inject constructor(
     private suspend fun search(query: String) {
         _uiState.value = _uiState.value.copy(isSearching = true, error = null)
 
-        val result = filesRepository.searchFiles(query, limit = 50)
+        // Uses the richer /api/media/search endpoint (matches series/actor tags too),
+        // instead of the legacy /api/files?search= filename-only search.
+        val result = filesRepository.searchMedia(query)
         result.fold(
             onSuccess = { files ->
                 _uiState.value = _uiState.value.copy(

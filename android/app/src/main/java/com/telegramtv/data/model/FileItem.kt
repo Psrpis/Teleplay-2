@@ -40,10 +40,21 @@ data class FileItem(
     @SerializedName("last_watched") val lastWatched: String? = null
 ) {
     /**
-     * Best title to display (media title if metadata exists, else file name).
+     * Best title to display. Prefers the real filename (cleaned up) so
+     * descriptive naming (e.g. actor names) isn't hidden behind a short
+     * auto-tagged series/studio title. Falls back to metadata title only
+     * if the filename is somehow blank.
      */
     val displayTitle: String
-        get() = metadata?.title?.takeIf { it.isNotBlank() } ?: fileName
+        get() = fileName
+            .substringBeforeLast('.', fileName)
+            .replace('.', ' ')
+            .replace('_', ' ')
+            .replace(Regex("\\s+"), " ")
+            .trim()
+            .takeIf { it.isNotBlank() }
+            ?: metadata?.title?.takeIf { it.isNotBlank() }
+            ?: fileName
 
     /**
      * Best poster image URL to display.

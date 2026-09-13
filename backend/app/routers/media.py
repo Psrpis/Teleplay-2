@@ -50,6 +50,7 @@ from ..services import (
     escape_like,
     fetch_continue_watching_files,
     fetch_recent_files,
+    normalize_search_text,
 )
 
 router = APIRouter(prefix="/media", tags=["Media Center"])
@@ -170,9 +171,25 @@ async def media_search(
     query = select(File).where(File.user_id == current_user.id).options(*_file_options())
     metadata_joined = False
     if q.strip():
-        needle = f"%{escape_like(q.strip())}%"
+        # Normalize both sides (dots/underscores -> spaces) so "Mira Luv" matches
+        # a filename or tag stored as "Mira.Luv", and also match against any
+        # series/actor tags linked to the file, not just filename/title.
+        needle = f"%{escape_like(normalize_search_text(q))}%"
+
+        def _normalized(col):
+            return func.lower(func.replace(func.replace(col, ".", " "), "_", " "))
+
+        tag_match_subquery = (
+            select(FileTag.file_id)
+            .join(Tag, Tag.id == FileTag.tag_id)
+            .where(Tag.user_id == current_user.id, _normalized(Tag.name).ilike(needle, escape="\\"))
+        )
         query = query.outerjoin(MediaMetadata, MediaMetadata.file_id == File.id).where(
-            or_(File.file_name.ilike(needle, escape="\\"), MediaMetadata.title.ilike(needle, escape="\\"))
+            or_(
+                _normalized(File.file_name).ilike(needle, escape="\\"),
+                _normalized(MediaMetadata.title).ilike(needle, escape="\\"),
+                File.id.in_(tag_match_subquery),
+            )
         )
         metadata_joined = True
     if file_type:

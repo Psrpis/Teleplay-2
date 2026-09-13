@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete, select, desc, func, or_
+from sqlalchemy import delete, select, desc, func, or_, and_
 from sqlalchemy.orm import selectinload
 
 from .models import File, WatchProgress, Folder, FileTag, Tag, MediaMetadata
@@ -48,6 +48,15 @@ def file_load_options():
 def escape_like(value: str) -> str:
     """Escape special LIKE/ILIKE characters to prevent SQL injection."""
     return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def normalize_search_text(value: str) -> str:
+    """Normalize free-text search input: dots/underscores -> spaces, collapsed
+    whitespace. Lets a query like "Mira Luv" match filenames/tags stored as
+    "Mira.Luv" or "Mira_Luv"."""
+    text = re.sub(r"[._]+", " ", value or "")
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
 
 
 def parse_episode_reference(file_name: str) -> Optional[dict]:
@@ -337,13 +346,45 @@ def extract_metadata(data: dict, file_type: str) -> tuple[int | None, int | None
     return duration, video_stream.get("width"), video_stream.get("height")
 
 
+async def generate_thumbnail(source_path: Path, duration: int | None) -> Path | None:
+    """Grab a single frame as a JPEG thumbnail using ffmpeg. Returns the temp
+    thumbnail path on success, or None if extraction failed (never raises —
+    a missing thumbnail shouldn't block duration/dimension backfill)."""
+    # Pick a safe seek point: a few seconds in, but never past the midpoint
+    # of very short clips.
+    seek = 3
+    if duration is not None and duration > 0:
+        seek = max(0, min(seek, duration // 2))
+    fd, thumb_path_str = tempfile.mkstemp(prefix="teleplay-thumb-", suffix=".jpg")
+    import os as _os
+    _os.close(fd)
+    thumb_path = Path(thumb_path_str)
+    process = await asyncio.create_subprocess_exec(
+        "ffmpeg", "-y", "-ss", str(seek), "-i", str(source_path),
+        "-vframes", "1", "-q:v", "2", str(thumb_path),
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
+    await process.communicate()
+    if process.returncode != 0 or not thumb_path.exists() or thumb_path.stat().st_size == 0:
+        thumb_path.unlink(missing_ok=True)
+        return None
+    return thumb_path
+
+
 async def process_one(file: File, db: AsyncSession) -> bool:
-    """Download, probe, and persist one file using the already-running Telegram client."""
+    """Download, probe, and persist one file using the already-running Telegram client.
+
+    Also opportunistically backfills a thumbnail for video files that don't
+    have one yet (common for files uploaded as raw Telegram "documents",
+    which never get an auto-generated thumbnail), reusing the same
+    downloaded temp file rather than downloading twice.
+    """
     client = telegram.tg_client
     if client is None or not client.is_connected:
         raise RuntimeError("Telegram client is not connected")
 
     temp_path: Path | None = None
+    thumb_path: Path | None = None
     try:
         suffix = Path(file.file_name or "media.bin").suffix or ".bin"
         with tempfile.NamedTemporaryFile(prefix="teleplay-", suffix=suffix, delete=False) as handle:
@@ -362,10 +403,24 @@ async def process_one(file: File, db: AsyncSession) -> bool:
                 current.width = width
                 current.height = height
             await db.commit()
+
+        if current and current.file_type == "video" and not current.thumbnail_file_id:
+            try:
+                thumb_path = await generate_thumbnail(temp_path, duration)
+                if thumb_path:
+                    sent = await client.send_photo(telegram.settings.telegram_storage_channel_id, photo=str(thumb_path))
+                    if sent and sent.photo:
+                        current.thumbnail_file_id = sent.photo.file_id
+                        await db.commit()
+            except Exception:
+                await db.rollback()
+                logger.exception("Thumbnail backfill failed for file id %s (%s)", file.id, file.file_name)
         return True
     finally:
         if temp_path:
             temp_path.unlink(missing_ok=True)
+        if thumb_path:
+            thumb_path.unlink(missing_ok=True)
 
 
 async def backfill_media_metadata(db: AsyncSession | None = None) -> None:
@@ -377,14 +432,21 @@ async def backfill_media_metadata(db: AsyncSession | None = None) -> None:
     owns_session = db is None
     session = db or async_session()
     try:
+        # Covers two cases that both stem from files uploaded as raw Telegram
+        # "documents": missing duration/dimensions, and (for videos) a
+        # missing thumbnail — either one alone is enough to reprocess a file.
+        needs_backfill = or_(
+            File.duration.is_(None),
+            and_(File.file_type == "video", File.thumbnail_file_id.is_(None)),
+        )
         total_query = select(func.count(File.id)).where(
             File.file_type.in_(("video", "audio")),
-            File.duration.is_(None),
+            needs_backfill,
         )
         total = int((await session.execute(total_query)).scalar_one())
         query = select(File).where(
             File.file_type.in_(("video", "audio")),
-            File.duration.is_(None),
+            needs_backfill,
         ).order_by(File.id)
         files = (await session.execute(query)).scalars().all()
         if not files:

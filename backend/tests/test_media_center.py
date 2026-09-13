@@ -173,6 +173,43 @@ def test_bulk_add_collection_items_preserves_existing_and_skips_duplicates():
     asyncio.run(run_test())
 
 
+def test_media_search_matches_tags_and_ignores_punctuation():
+    async def run_test():
+        engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+        async with session_factory() as db:
+            from app.routers.media import media_search
+
+            user = User(id=5, telegram_id=5005)
+            tagged_file = File(id=30, user_id=5, file_id="f1", file_unique_id="f1", channel_message_id=30,
+                                file_name="DaughterSwap.Mira.Luv.XXX.1080p.HEVC.mp4", file_size=10, file_type="video")
+            other_file = File(id=31, user_id=5, file_id="f2", file_unique_id="f2", channel_message_id=31,
+                               file_name="OtherStudio.Someone.Else.mp4", file_size=10, file_type="video")
+            actor_tag = Tag(id=40, user_id=5, name="Mira Luv")
+            db.add_all([user, tagged_file, other_file, actor_tag])
+            await db.flush()
+            db.add(FileTag(file_id=tagged_file.id, tag_id=actor_tag.id))
+            await db.commit()
+
+            common = dict(file_type=None, watched=None, favorite=None, tag=None, collection_id=None,
+                          year=None, sort="recent", page=1, per_page=30, db=db, current_user=user)
+
+            # Query has a space, actual tag/filename use a dot — should still match.
+            by_actor = await media_search(q="Mira Luv", **common)
+            assert {f.file_name for f in by_actor["files"]} == {"DaughterSwap.Mira.Luv.XXX.1080p.HEVC.mp4"}
+
+            # Studio name only, from the filename itself.
+            by_studio = await media_search(q="daughterswap", **common)
+            assert {f.file_name for f in by_studio["files"]} == {"DaughterSwap.Mira.Luv.XXX.1080p.HEVC.mp4"}
+
+        await engine.dispose()
+
+    asyncio.run(run_test())
+
+
 def test_file_list_supports_name_and_size_sorting():
     async def run_test():
         engine = create_async_engine("sqlite+aiosqlite:///:memory:")

@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse
 import os
 
 import logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logging.getLogger("pyrogram").setLevel(logging.INFO)
 
 from .config import get_settings
