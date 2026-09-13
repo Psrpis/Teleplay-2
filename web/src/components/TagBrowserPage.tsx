@@ -36,7 +36,7 @@ export default function TagBrowserPage({ kind }: { kind: 'series' | 'actor' }) {
                     <div className="flex items-center gap-3"><div className="rounded-xl bg-primary-500/15 p-2 text-primary-200"><Icon className="h-5 w-5" /></div><div><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary-300/80">Auto-organized</p><h1 className="text-lg font-semibold">{isSeries ? 'Series' : 'Actors'}</h1></div></div>
                 </header>
                 <div className="p-6 pb-24 sm:p-10 md:pb-10 lg:p-16">
-                    <div className="max-w-2xl"><p className="text-sm text-primary-200">{isSeries ? 'Find every episode by series, even when files live in different folders.' : 'Jump to every movie and series connected to an actor.'}</p><h2 className="mt-2 text-3xl font-bold">{isSeries ? 'Browse by series' : 'Browse by actor'}</h2><p className="mt-3 text-sm leading-6 text-dark-400">TelePlay reads patterns such as <code className="rounded bg-white/10 px-1.5 py-0.5 text-xs text-primary-200">S01E02</code>, <code className="rounded bg-white/10 px-1.5 py-0.5 text-xs text-primary-200">oyuncuA</code>, quality, and codec markers from filenames and keeps the original file untouched.</p></div>
+                    <div className="max-w-2xl"><h2 className="text-3xl font-bold">{isSeries ? 'Browse by series' : 'Browse by actor'}</h2></div>
                     <div className="mt-8 flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2 text-sm text-dark-400"><Search className="h-4 w-4" /> {tags?.length || 0} {label} detected</div><button onClick={() => autoTag.mutate(5000)} disabled={autoTag.isPending} className="btn-secondary text-xs">{autoTag.isPending ? 'Tagging library…' : 'Tag library now'}</button></div>
 
                     {selected ? (
@@ -48,7 +48,7 @@ export default function TagBrowserPage({ kind }: { kind: 'series' | 'actor' }) {
                                 </div>
                                 <p className="text-sm text-dark-500">{results?.total || 0} matching files</p>
                             </div>
-                            {filesLoading ? <p className="mt-6 text-dark-400">Loading matching media…</p> : results?.files.length ? <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">{results.files.map((file) => <MediaCard key={file.id} file={file} compact />)}</div> : <p className="mt-6 text-dark-500">No files found for this tag.</p>}
+                            {filesLoading ? <p className="mt-6 text-dark-400">Loading matching media…</p> : results?.files.length ? <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">{results.files.map((file) => <MediaCard key={file.id} file={file} compact showFilename={isSeries} />)}</div> : <p className="mt-6 text-dark-500">No files found for this tag.</p>}
                         </section>
                     ) : (
                         <>

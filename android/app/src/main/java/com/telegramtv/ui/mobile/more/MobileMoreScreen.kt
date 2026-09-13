@@ -648,7 +648,8 @@ private fun SeriesContent(
                         file = ep,
                         serverUrl = serverUrl,
                         onResumeClick = { onPlayFile(ep.id) },
-                        onDetailClick = { onFileClick(ep) }
+                        onDetailClick = { onFileClick(ep) },
+                        showFilename = true
                     )
                 }
             }

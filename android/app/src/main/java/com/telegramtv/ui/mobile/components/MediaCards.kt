@@ -172,7 +172,8 @@ fun MediaWideCard(
     onResumeClick: () -> Unit,
     onDetailClick: () -> Unit,
     onDeleteClick: (() -> Unit)? = null,
-    progressLabel: String? = null
+    progressLabel: String? = null,
+    showFilename: Boolean = false
 ) {
     val thumbUrl = (file.thumbnailUrl ?: file.effectiveBackdropUrl ?: file.effectivePosterUrl)?.let { url ->
         if (url.startsWith("http://") || url.startsWith("https://")) url
@@ -262,6 +263,16 @@ fun MediaWideCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+
+                if (showFilename) {
+                    Text(
+                        text = file.fileName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(3.dp))
 

@@ -5,6 +5,7 @@ import { useAppStore } from '../lib/store';
 interface MediaCardProps {
     file: TelegramFile;
     compact?: boolean;
+    showFilename?: boolean;
 }
 
 function artworkFor(file: TelegramFile) {
@@ -14,7 +15,7 @@ function artworkFor(file: TelegramFile) {
     return `${window.location.origin}/${source}`;
 }
 
-export default function MediaCard({ file, compact = false }: MediaCardProps) {
+export default function MediaCard({ file, compact = false, showFilename = false }: MediaCardProps) {
     const setPreviewFile = useAppStore((state) => state.setPreviewFile);
     const favoriteMutation = useToggleFavorite();
     const watchedMutation = useSetWatched();
@@ -73,6 +74,11 @@ export default function MediaCard({ file, compact = false }: MediaCardProps) {
                     {file.watched_state === 'watched' ? <RotateCcw className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
                 </button>
             </div>
+            {showFilename && (
+                <p className="mt-2 break-words text-[10px] leading-4 text-dark-500" title={file.file_name}>
+                    {file.file_name}
+                </p>
+            )}
             <button type="button" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-dark-400 transition hover:text-white" onClick={() => isPlayable && setPreviewFile(file)}>
                 {file.watched_state === 'in_progress' ? <><RotateCcw className="h-3 w-3" /> Resume</> : <><Play className="h-3 w-3 fill-current" /> Play</>}
             </button>
