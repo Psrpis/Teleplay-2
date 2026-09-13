@@ -3,13 +3,7 @@ package com.telegramtv.ui.mobile
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
@@ -19,6 +13,16 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.outlined.People
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Tv
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -38,6 +42,7 @@ import com.telegramtv.ui.mobile.player.MobilePlayerScreen
 import com.telegramtv.ui.mobile.search.MobileSearchScreen
 import com.telegramtv.ui.mobile.library.MobileLibraryScreen
 import com.telegramtv.ui.mobile.more.MobileMoreScreen
+import com.telegramtv.ui.mobile.more.MoreSubScreen
 import androidx.compose.material3.MaterialTheme
 
 sealed class BottomNavItem(
@@ -50,6 +55,11 @@ sealed class BottomNavItem(
     object Search : BottomNavItem("search", "Search", Icons.Filled.Search, Icons.Outlined.Search)
     object Library : BottomNavItem("library", "Library", Icons.Filled.VideoLibrary, Icons.Outlined.VideoLibrary)
     object More : BottomNavItem("more", "More", Icons.Filled.MoreHoriz, Icons.Outlined.MoreHoriz)
+    object Movies : BottomNavItem("movies", "Movies", Icons.Filled.Movie, Icons.Outlined.Movie)
+    object Series : BottomNavItem("series", "Series", Icons.Filled.Tv, Icons.Outlined.Tv)
+    object Actors : BottomNavItem("actors", "Actors", Icons.Filled.People, Icons.Outlined.People)
+    object Statistics : BottomNavItem("stats", "Stats", Icons.Filled.BarChart, Icons.Outlined.BarChart)
+    object Settings : BottomNavItem("settings", "Settings", Icons.Filled.Settings, Icons.Outlined.Settings)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -178,8 +188,41 @@ fun MainAppScreen(
                     )
                 }
 
-                composable(BottomNavItem.More.route) {
+                composable(BottomNavItem.Movies.route) {
                     MobileMoreScreen(
+                        initialSubScreen = MoreSubScreen.MOVIES,
+                        onPlayFile = onNavigateToPlayer,
+                        onLogout = onLogout
+                    )
+                }
+
+                composable(BottomNavItem.Series.route) {
+                    MobileMoreScreen(
+                        initialSubScreen = MoreSubScreen.SERIES,
+                        onPlayFile = onNavigateToPlayer,
+                        onLogout = onLogout
+                    )
+                }
+
+                composable(BottomNavItem.Actors.route) {
+                    MobileMoreScreen(
+                        initialSubScreen = MoreSubScreen.ACTORS,
+                        onPlayFile = onNavigateToPlayer,
+                        onLogout = onLogout
+                    )
+                }
+
+                composable(BottomNavItem.Statistics.route) {
+                    MobileMoreScreen(
+                        initialSubScreen = MoreSubScreen.STATISTICS,
+                        onPlayFile = onNavigateToPlayer,
+                        onLogout = onLogout
+                    )
+                }
+
+                composable(BottomNavItem.Settings.route) {
+                    MobileMoreScreen(
+                        initialSubScreen = MoreSubScreen.SETTINGS,
                         onPlayFile = onNavigateToPlayer,
                         onLogout = onLogout
                     )
@@ -203,11 +246,16 @@ private fun CompactNavigationRail(navController: NavHostController, currentRoute
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.width(58.dp)
     ) {
+        Spacer(modifier = Modifier.weight(1f))
         listOf(
             BottomNavItem.Home,
             BottomNavItem.Search,
             BottomNavItem.Library,
-            BottomNavItem.More
+            BottomNavItem.Movies,
+            BottomNavItem.Series,
+            BottomNavItem.Actors,
+            BottomNavItem.Statistics,
+            BottomNavItem.Settings
         ).forEach { item ->
             val selected = currentRoute?.startsWith(item.route) == true
             NavigationRailItem(
@@ -228,6 +276,7 @@ private fun CompactNavigationRail(navController: NavHostController, currentRoute
                 )
             )
         }
+        Spacer(modifier = Modifier.weight(1f))
     }
 }
 

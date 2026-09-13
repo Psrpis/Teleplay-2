@@ -43,11 +43,18 @@ import com.telegramtv.ui.mobile.components.MediaWideCard
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileMoreScreen(
+    initialSubScreen: MoreSubScreen = MoreSubScreen.MENU,
     viewModel: MobileMoreViewModel = hiltViewModel(),
     onPlayFile: (Int) -> Unit,
     onLogout: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(initialSubScreen) {
+        if (initialSubScreen != MoreSubScreen.MENU) {
+            viewModel.navigateTo(initialSubScreen)
+        }
+    }
 
     var showServerDialog by remember { mutableStateOf(false) }
     var editedServerUrl by remember(uiState.serverUrl) { mutableStateOf(uiState.serverUrl) }
@@ -66,7 +73,6 @@ fun MobileMoreScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 80.dp) // Space for bottom nav
         ) {
             // Header
             Row(
@@ -120,6 +126,7 @@ fun MobileMoreScreen(
                 MoreSubScreen.SERIES -> {
                     SeriesContent(
                         seriesList = uiState.seriesList,
+                        isLoading = uiState.isLoading,
                         selectedSeries = uiState.selectedSeries,
                         selectedSeason = uiState.selectedSeason,
                         serverUrl = uiState.serverUrl,
@@ -530,6 +537,7 @@ private fun MoviesContent(
 @Composable
 private fun SeriesContent(
     seriesList: List<SeriesInfo>,
+    isLoading: Boolean,
     selectedSeries: SeriesInfo?,
     selectedSeason: Int,
     serverUrl: String,
@@ -540,9 +548,17 @@ private fun SeriesContent(
 ) {
     if (selectedSeries == null) {
         // List all TV Series
-        if (seriesList.isEmpty()) {
+        if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No TV series found in library", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+        } else if (seriesList.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("No TV series found in library", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Series are detected from episode names such as S01E01.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                }
             }
         } else {
             LazyVerticalGrid(

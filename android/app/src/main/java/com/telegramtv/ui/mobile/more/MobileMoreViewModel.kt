@@ -116,8 +116,7 @@ class MobileMoreViewModel @Inject constructor(
     fun loadMovies() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val result = filesRepository.getFiles(folderId = null, fileType = "video")
-            val allVideos = result.getOrNull()?.items ?: emptyList<FileItem>()
+            val allVideos = loadAllVideoFiles()
             // Filter out files that are explicitly episodes if mediaType == "episode"
             val moviesList = allVideos.filter {
                 it.metadata?.mediaType != "episode" && it.metadata?.mediaType != "tv"
@@ -133,21 +132,24 @@ class MobileMoreViewModel @Inject constructor(
     fun loadSeries() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val result = filesRepository.getFiles(folderId = null, fileType = "video")
-            val allVideos = result.getOrNull()?.items ?: emptyList<FileItem>()
+            val allVideos = loadAllVideoFiles()
 
             // Group by series: check metadata.title (or parse file name / metadata.mediaType)
             val seriesMap = mutableMapOf<String, MutableList<FileItem>>()
             for (file in allVideos) {
                 val seriesName = file.metadata?.let { meta ->
-                    if (meta.mediaType == "episode" || meta.season != null) {
-                        meta.originalTitle ?: meta.title?.substringBefore(" S0") ?: meta.title
+                    if (meta.mediaType?.equals("episode", true) == true ||
+                        meta.mediaType?.equals("tv", true) == true ||
+                        meta.mediaType?.equals("series", true) == true ||
+                        meta.season != null || meta.episode != null
+                    ) {
+                        cleanSeriesName(meta.originalTitle ?: meta.title ?: file.fileName)
                     } else null
                 } ?: run {
                     // Fallback parse e.g. "Breaking Bad S01E01"
                     val name = file.fileName
                     if (Regex("S\\d{1,2}E\\d{1,2}", RegexOption.IGNORE_CASE).containsMatchIn(name)) {
-                        name.substringBefore("S").trim().trimEnd('.', '-', '_', ' ')
+                        cleanSeriesName(name)
                     } else null
                 }
 
@@ -170,6 +172,30 @@ class MobileMoreViewModel @Inject constructor(
             _uiState.update { it.copy(seriesList = seriesInfoList, isLoading = false) }
         }
     }
+
+    private suspend fun loadAllVideoFiles(): List<FileItem> {
+        val videos = mutableListOf<FileItem>()
+        var page = 1
+        val pageSize = 100
+        while (page <= 100) {
+            val result = filesRepository.getFiles(
+                folderId = null,
+                page = page,
+                perPage = pageSize,
+                fileType = "video"
+            )
+            val response = result.getOrNull() ?: break
+            videos += response.items
+            if (response.items.isEmpty() || videos.size >= response.total || response.items.size < pageSize) break
+            page++
+        }
+        return videos.distinctBy { it.id }
+    }
+
+    private fun cleanSeriesName(value: String): String = value
+        .replace(Regex("[._]?[Ss]\\d{1,2}[Ee]\\d{1,2}.*$"), "")
+        .replace(Regex("[._ -]+$"), "")
+        .trim()
 
     fun selectSeries(series: SeriesInfo) {
         val initialSeason = series.seasons.keys.minOrNull() ?: 1
