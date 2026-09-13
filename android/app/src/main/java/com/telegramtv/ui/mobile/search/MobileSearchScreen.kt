@@ -3,7 +3,6 @@ package com.telegramtv.ui.mobile.search
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -13,7 +12,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -86,7 +84,6 @@ fun MobileSearchScreen(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = {
                     keyboardController?.hide()
-                    if (uiState.query.isNotBlank()) viewModel.addRecentQuery(uiState.query)
                 }),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -127,47 +124,12 @@ fun MobileSearchScreen(
                 Text(uiState.error!!, color = MaterialTheme.colorScheme.error)
             }
         } else if (uiState.query.isEmpty()) {
-            // Recent Searches View
+            // Empty search state; no fabricated or persisted recent searches.
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(20.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.History,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Recent Searches",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(uiState.recentQueries) { query ->
-                        SuggestionChip(
-                            onClick = {
-                                viewModel.onQueryChange(query)
-                                keyboardController?.hide()
-                            },
-                            label = { Text(query) },
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(48.dp))
-
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text(
                         text = "Find movies, series, actors or files",

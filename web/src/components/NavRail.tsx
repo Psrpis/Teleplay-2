@@ -8,7 +8,7 @@
  * Self-contained and route-aware — drop `<NavRail />` into any page
  * layout with no props.
  */
-import { Heart, History, Home, Menu, Search, Settings } from 'lucide-react';
+import { BarChart3, Film, Heart, History, Home, Menu, Search, Settings, Tv, Users } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import Sidebar from './Sidebar';
@@ -16,8 +16,12 @@ import Sidebar from './Sidebar';
 const RAIL_ITEMS = [
     { path: '/', icon: Home, label: 'Home' },
     { path: '/search', icon: Search, label: 'Search' },
+    { path: '/library', icon: Film, label: 'Library' },
     { path: '/favorites', icon: Heart, label: 'Favorites' },
     { path: '/history', icon: History, label: 'History' },
+    { path: '/series', icon: Tv, label: 'Series' },
+    { path: '/actors', icon: Users, label: 'Actors' },
+    { path: '/stats', icon: BarChart3, label: 'Statistics' },
 ];
 
 export const RAIL_WIDTH = 52;
@@ -33,9 +37,10 @@ export default function NavRail() {
     return (
         <>
             <nav
-                className="fixed inset-y-0 left-0 z-30 flex flex-col items-center gap-5 border-r border-white/[0.07] bg-dark-950/95 pt-4 backdrop-blur-xl"
+                className="fixed inset-y-0 left-0 z-30 flex flex-col items-center gap-3 border-r border-white/[0.07] bg-dark-950/95 py-4 backdrop-blur-xl"
                 style={{ width: RAIL_WIDTH, paddingBottom: 'env(safe-area-inset-bottom, 12px)' }}
             >
+                <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3">
                 {RAIL_ITEMS.map(({ path, icon: Icon, label }) => {
                     const active = isActive(path);
                     return (
@@ -53,6 +58,7 @@ export default function NavRail() {
                         </button>
                     );
                 })}
+                </div>
                 <button
                     onClick={() => setMoreOpen(true)}
                     aria-label="More"
@@ -65,7 +71,7 @@ export default function NavRail() {
                     onClick={() => navigate('/settings')}
                     aria-label="Settings"
                     title="Settings"
-                    className="mt-auto flex h-8 w-8 items-center justify-center rounded-lg text-dark-600 transition-colors hover:text-dark-300"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-dark-600 transition-colors hover:text-dark-300"
                 >
                     <Settings className="h-[18px] w-[18px]" />
                 </button>

@@ -181,7 +181,8 @@ interface TelePlayApi {
         @Query("q") query: String,
         @Query("file_type") fileType: String? = null,
         @Query("watched") watched: String? = null,
-        @Query("favorite") favorite: Boolean? = null
+        @Query("favorite") favorite: Boolean? = null,
+        @Query("tag") tag: String? = null
     ): Response<MediaSearchResponse>
 
     @GET("media/favorites")

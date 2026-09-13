@@ -368,9 +368,9 @@ class FilesRepository @Inject constructor(
         }
     }
 
-    suspend fun searchMedia(query: String, fileType: String? = null): Result<List<FileItem>> {
+    suspend fun searchMedia(query: String, fileType: String? = null, tag: String? = null): Result<List<FileItem>> {
         return try {
-            val response = api.searchMedia(query = query, fileType = fileType)
+            val response = api.searchMedia(query = query, fileType = fileType, tag = tag)
             if (response.isSuccessful) Result.success(response.body()?.files ?: emptyList())
             else Result.failure(Exception("Search failed"))
         } catch (e: Exception) {

@@ -132,7 +132,20 @@ class MobileMoreViewModel @Inject constructor(
     fun loadSeries() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val allVideos = loadAllVideoFiles()
+            val seriesTags = filesRepository.getMediaTags(kind = "series").getOrNull().orEmpty()
+            val taggedSeries = seriesTags.mapNotNull { tag ->
+                val files = filesRepository.searchMedia(
+                    query = "",
+                    fileType = "video",
+                    tag = tag.value ?: tag.name
+                ).getOrNull().orEmpty()
+                if (files.isEmpty()) null else tag.name to files
+            }.toMap()
+            val allVideos = if (taggedSeries.isNotEmpty()) {
+                taggedSeries.values.flatten().distinctBy { it.id }
+            } else {
+                loadAllVideoFiles()
+            }
 
             // Group by series: check metadata.title (or parse file name / metadata.mediaType)
             val seriesMap = mutableMapOf<String, MutableList<FileItem>>()
@@ -158,7 +171,17 @@ class MobileMoreViewModel @Inject constructor(
                 }
             }
 
-            val seriesInfoList = seriesMap.map { (name, episodes) ->
+            val seriesInfoList = if (taggedSeries.isNotEmpty()) {
+                taggedSeries.map { (name, episodes) ->
+                    val seasonsGrouped = episodes.groupBy { it.metadata?.season ?: 1 }
+                    SeriesInfo(
+                        name = name,
+                        totalEpisodes = episodes.size,
+                        seasons = seasonsGrouped,
+                        posterUrl = episodes.firstOrNull()?.thumbnailUrl ?: episodes.firstOrNull()?.effectivePosterUrl
+                    )
+                }
+            } else seriesMap.map { (name, episodes) ->
                 val seasonsGrouped = episodes.groupBy { it.metadata?.season ?: 1 }
                 val poster = episodes.firstOrNull()?.thumbnailUrl
                     ?: episodes.firstOrNull()?.effectivePosterUrl
