@@ -101,7 +101,8 @@ private fun FavoriteMediaRow(file: FileItem, serverUrl: String, onClick: () -> U
         Box(Modifier.size(112.dp, 72.dp).clip(RoundedCornerShape(12.dp))) {
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(file.thumbnailUrl?.let { if (it.startsWith("http")) it else "$serverUrl$it" })
+                    .data(file.thumbnailUrl?.let { if (it.startsWith("http")) it else "${serverUrl.trimEnd('/')}/${it.trimStart('/')}" }
+                        ?: "${serverUrl.trimEnd('/')}/api/stream/${file.id}/thumbnail")
                     .crossfade(true).build(),
                 contentDescription = file.fileName,
                 contentScale = ContentScale.Crop,

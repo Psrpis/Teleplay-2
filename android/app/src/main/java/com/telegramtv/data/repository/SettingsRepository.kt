@@ -29,6 +29,7 @@ class SettingsRepository @Inject constructor(
         val BOT_USERNAME = stringPreferencesKey("bot_username")
         val AUTO_PLAY_NEXT = booleanPreferencesKey("auto_play_next")
         val PREFERRED_QUALITY = stringPreferencesKey("preferred_quality")
+        val PLAYBACK_SPEED = stringPreferencesKey("playback_speed")
     }
 
     /**
@@ -103,6 +104,14 @@ class SettingsRepository @Inject constructor(
     suspend fun setPreferredQuality(quality: String) {
         context.settingsDataStore.edit { prefs ->
             prefs[PreferencesKeys.PREFERRED_QUALITY] = quality
+        }
+    }
+
+    suspend fun getPlaybackSpeed(): Float = context.settingsDataStore.data.first()[PreferencesKeys.PLAYBACK_SPEED]?.toFloatOrNull() ?: 1.0f
+
+    suspend fun setPlaybackSpeed(speed: Float) {
+        context.settingsDataStore.edit { prefs ->
+            prefs[PreferencesKeys.PLAYBACK_SPEED] = speed.toString()
         }
     }
 }

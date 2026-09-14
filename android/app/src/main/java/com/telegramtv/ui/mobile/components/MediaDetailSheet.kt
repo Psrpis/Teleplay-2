@@ -40,12 +40,12 @@ fun MediaDetailSheet(
 
     val backdropUrl = (file.thumbnailUrl ?: file.effectiveBackdropUrl ?: file.effectivePosterUrl)?.let { url ->
         if (url.startsWith("http://") || url.startsWith("https://")) url
-        else "${serverUrl.trimEnd('/')}/$url"
+        else "${serverUrl.trimEnd('/')}/${url.trimStart('/')}"
     } ?: "${serverUrl.trimEnd('/')}/api/stream/${file.id}/thumbnail"
 
     val posterUrl = (file.thumbnailUrl ?: file.effectivePosterUrl)?.let { url ->
         if (url.startsWith("http://") || url.startsWith("https://")) url
-        else "${serverUrl.trimEnd('/')}/$url"
+        else "${serverUrl.trimEnd('/')}/${url.trimStart('/')}"
     } ?: "${serverUrl.trimEnd('/')}/api/stream/${file.id}/thumbnail"
 
     ModalBottomSheet(

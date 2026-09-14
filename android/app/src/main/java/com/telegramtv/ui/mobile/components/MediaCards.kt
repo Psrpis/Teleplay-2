@@ -34,11 +34,13 @@ fun MediaPosterCard(
     serverUrl: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
-    onLongClick: (() -> Unit)? = null
+    onLongClick: (() -> Unit)? = null,
+    showFilename: Boolean = false,
+    showTags: Boolean = false
 ) {
     val posterUrl = (file.thumbnailUrl ?: file.effectivePosterUrl)?.let { url ->
         if (url.startsWith("http://") || url.startsWith("https://")) url
-        else "${serverUrl.trimEnd('/')}/$url"
+        else "${serverUrl.trimEnd('/')}/${url.trimStart('/')}"
     } ?: "${serverUrl.trimEnd('/')}/api/stream/${file.id}/thumbnail"
 
     Column(
@@ -147,6 +149,28 @@ fun MediaPosterCard(
             overflow = TextOverflow.Ellipsis
         )
 
+        val displayTags = file.tags.ifEmpty {
+            listOfNotNull(file.metadata?.mediaType?.takeIf { it.isNotBlank() })
+        }
+        if (showTags && displayTags.isNotEmpty()) {
+            Text(
+                text = displayTags.joinToString(" · "),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        if (showFilename) {
+            Text(
+                text = file.fileName,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
         // Subtitle (Year / Duration)
         val subtitle = file.metadata?.year?.toString()
             ?: file.formattedDuration
@@ -177,7 +201,7 @@ fun MediaWideCard(
 ) {
     val thumbUrl = (file.thumbnailUrl ?: file.effectiveBackdropUrl ?: file.effectivePosterUrl)?.let { url ->
         if (url.startsWith("http://") || url.startsWith("https://")) url
-        else "${serverUrl.trimEnd('/')}/$url"
+        else "${serverUrl.trimEnd('/')}/${url.trimStart('/')}"
     } ?: "${serverUrl.trimEnd('/')}/api/stream/${file.id}/thumbnail"
 
     Card(

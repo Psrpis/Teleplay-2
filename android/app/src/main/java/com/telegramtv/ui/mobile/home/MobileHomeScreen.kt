@@ -624,7 +624,7 @@ fun HomeHeroBanner(
     onDetailClick: () -> Unit
 ) {
     val backdrop = (file.thumbnailUrl ?: file.effectiveBackdropUrl ?: file.effectivePosterUrl)?.let { url ->
-        if (url.startsWith("http")) url else "${serverUrl.trimEnd('/')}/$url"
+        if (url.startsWith("http")) url else "${serverUrl.trimEnd('/')}/${url.trimStart('/')}"
     } ?: "${serverUrl.trimEnd('/')}/api/stream/${file.id}/thumbnail"
 
     Card(
@@ -714,7 +714,7 @@ fun HomeHeroBanner(
 fun ContinueWatchingCard(file: FileItem, serverUrl: String, onClick: (Int) -> Unit) {
     val progress = ((file.progressPercent ?: 0f) / 100f).coerceIn(0f, 1f)
     val imagePath = file.thumbnailUrl ?: file.effectiveBackdropUrl ?: file.effectivePosterUrl
-    val imageUrl = imagePath?.let { if (it.startsWith("http")) it else "${serverUrl.trimEnd('/')}/$it" }
+    val imageUrl = imagePath?.let { if (it.startsWith("http")) it else "${serverUrl.trimEnd('/')}/${it.trimStart('/')}" }
         ?: "${serverUrl.trimEnd('/')}/api/stream/${file.id}/thumbnail"
 
     Card(
@@ -937,7 +937,7 @@ fun FileCard(
                 } else {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(file.thumbnailUrl?.let { if (it.startsWith("http")) it else "$serverUrl$it" }
+                            .data(file.thumbnailUrl?.let { if (it.startsWith("http")) it else "${serverUrl.trimEnd('/')}/${it.trimStart('/')}" }
                         ?: "$serverUrl/api/stream/${file.id}/thumbnail")
                             .crossfade(true)
                             .build(),

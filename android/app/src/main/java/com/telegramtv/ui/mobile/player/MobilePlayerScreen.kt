@@ -376,6 +376,8 @@ fun MobilePlayerScreen(
                     onResize = { viewModel.cycleResizeMode() },
                     onOrientation = { viewModel.cycleOrientation() },
                     onSettings = { viewModel.toggleSettings() },
+                    isFavorite = uiState.file?.isFavorite == true,
+                    onFavorite = { viewModel.toggleFavorite() },
                     onPip = {
                         if (uiState.isAudioFile) {
                             // For audio: start background playback and go back
@@ -471,6 +473,8 @@ fun MobilePlayerControls(
     onResize: () -> Unit,
     onOrientation: () -> Unit,
     onSettings: () -> Unit,
+    isFavorite: Boolean,
+    onFavorite: () -> Unit,
     onPip: () -> Unit,
     orientationMode: Int,
     isAudioFile: Boolean = false
@@ -529,6 +533,13 @@ fun MobilePlayerControls(
                             if (isAudioFile) Icons.Filled.Headphones else Icons.Filled.PictureInPicture,
                             if (isAudioFile) "Background Play" else "PIP",
                             tint = Color.White
+                        )
+                    }
+                    IconButton(onClick = onFavorite) {
+                        Icon(
+                            if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            "Favorite",
+                            tint = if (isFavorite) Color(0xFFFF6B9A) else Color.White
                         )
                     }
                     IconButton(onClick = onSettings) {

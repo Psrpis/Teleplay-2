@@ -118,8 +118,10 @@ fun MobileMoreScreen(
                     MoviesContent(
                         movies = uiState.movies,
                         filter = uiState.movieFilter,
+                        sort = uiState.movieSort,
                         serverUrl = uiState.serverUrl,
                         onFilterChange = { viewModel.setMovieFilter(it) },
+                        onSortChange = { viewModel.setMovieSort(it) },
                         onFileClick = { viewModel.showFileDetail(it) }
                     )
                 }
@@ -141,6 +143,7 @@ fun MobileMoreScreen(
                         actors = uiState.actors,
                         selectedActor = uiState.selectedActor,
                         files = uiState.actorFiles,
+                        isLoading = uiState.isLoading,
                         serverUrl = uiState.serverUrl,
                         onSelectActor = { viewModel.selectActor(it) },
                         onPlayFile = onPlayFile,
@@ -181,7 +184,7 @@ fun MobileMoreScreen(
                     Column {
                         val poster = (surprise.thumbnailUrl ?: surprise.effectiveBackdropUrl ?: surprise.effectivePosterUrl)?.let { url ->
                             if (url.startsWith("http://") || url.startsWith("https://")) url
-                            else "${uiState.serverUrl.trimEnd('/')}/$url"
+                            else "${uiState.serverUrl.trimEnd('/')}/${url.trimStart('/')}"
                         } ?: "${uiState.serverUrl.trimEnd('/')}/api/stream/${surprise.id}/thumbnail"
                         if (poster != null) {
                             Box(
@@ -483,14 +486,22 @@ private fun MoreMenuItem(
 private fun MoviesContent(
     movies: List<FileItem>,
     filter: String,
+    sort: String,
     serverUrl: String,
     onFilterChange: (String) -> Unit,
+    onSortChange: (String) -> Unit,
     onFileClick: (FileItem) -> Unit
 ) {
     val filteredMovies = when (filter) {
         "UNWATCHED" -> movies.filter { it.watchedState != "watched" }
         "WATCHED" -> movies.filter { it.watchedState == "watched" }
         else -> movies
+    }.let { list ->
+        when (sort) {
+            "TITLE" -> list.sortedBy { it.fileName.lowercase() }
+            "LENGTH" -> list.sortedByDescending { it.duration ?: 0.0 }
+            else -> list.sortedByDescending { it.createdAt }
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -505,6 +516,22 @@ private fun MoviesContent(
                 FilterChip(
                     selected = filter == key,
                     onClick = { onFilterChange(key) },
+                    label = { Text(label) },
+                    shape = RoundedCornerShape(16.dp)
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("RECENT" to "Recently added", "TITLE" to "Alphabetical", "LENGTH" to "Length").forEach { (key, label) ->
+                FilterChip(
+                    selected = sort == key,
+                    onClick = { onSortChange(key) },
                     label = { Text(label) },
                     shape = RoundedCornerShape(16.dp)
                 )
@@ -526,7 +553,9 @@ private fun MoviesContent(
                     MediaPosterCard(
                         file = movie,
                         serverUrl = serverUrl,
-                        onClick = { onFileClick(movie) }
+                        onClick = { onFileClick(movie) },
+                        showFilename = true,
+                        showTags = true
                     )
                 }
             }
@@ -584,7 +613,7 @@ private fun SeriesContent(
                             ) {
                                 val poster = series.posterUrl?.let { url ->
                                     if (url.startsWith("http://") || url.startsWith("https://")) url
-                                    else "${serverUrl.trimEnd('/')}/$url"
+                                    else "${serverUrl.trimEnd('/')}/${url.trimStart('/')}"
                                 }
                                 AsyncImage(
                                     model = ImageRequest.Builder(LocalContext.current)
@@ -662,6 +691,7 @@ private fun ActorsContent(
     actors: List<MediaTag>,
     selectedActor: MediaTag?,
     files: List<FileItem>,
+    isLoading: Boolean,
     serverUrl: String,
     onSelectActor: (MediaTag) -> Unit,
     onPlayFile: (Int) -> Unit,
@@ -726,7 +756,11 @@ private fun ActorsContent(
             }
         }
     } else {
-        if (files.isEmpty()) {
+        if (isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+        } else if (files.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("No files for ${selectedActor.name}", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

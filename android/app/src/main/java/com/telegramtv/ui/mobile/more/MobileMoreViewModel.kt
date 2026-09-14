@@ -40,6 +40,7 @@ data class MoreUiState(
     // Movies
     val movies: List<FileItem> = emptyList(),
     val movieFilter: String = "ALL", // ALL, UNWATCHED, WATCHED
+    val movieSort: String = "RECENT", // RECENT, TITLE, LENGTH
 
     // Series
     val seriesList: List<SeriesInfo> = emptyList(),
@@ -127,6 +128,10 @@ class MobileMoreViewModel @Inject constructor(
 
     fun setMovieFilter(filter: String) {
         _uiState.update { it.copy(movieFilter = filter) }
+    }
+
+    fun setMovieSort(sort: String) {
+        _uiState.update { it.copy(movieSort = sort) }
     }
 
     fun loadSeries() {
@@ -242,12 +247,10 @@ class MobileMoreViewModel @Inject constructor(
     fun selectActor(actor: MediaTag) {
         _uiState.update { it.copy(selectedActor = actor, isLoading = true) }
         viewModelScope.launch {
-            val result = filesRepository.getFiles(folderId = null)
-            val allFiles = result.getOrNull()?.items ?: emptyList<FileItem>()
-            val filtered = allFiles.filter { file ->
-                file.metadata?.cast?.any { it.equals(actor.name, ignoreCase = true) } == true ||
-                file.tags.any { it.equals(actor.name, ignoreCase = true) }
-            }
+            val filtered = filesRepository.searchMedia(
+                query = "",
+                tag = actor.value ?: actor.name
+            ).getOrNull().orEmpty()
             _uiState.update { it.copy(actorFiles = filtered, isLoading = false) }
         }
     }

@@ -216,6 +216,11 @@ class PlayerViewModel @Inject constructor(
 
     init {
         setupPlayerListener()
+        viewModelScope.launch {
+            val speed = settingsRepository.getPlaybackSpeed()
+            exoPlayer.setPlaybackSpeed(speed)
+            _uiState.value = _uiState.value.copy(playbackSpeed = speed)
+        }
         loadAndPlay()
         startProgressTracking()
     }
@@ -828,6 +833,17 @@ class PlayerViewModel @Inject constructor(
     fun setPlaybackSpeed(speed: Float) {
         exoPlayer.setPlaybackSpeed(speed)
         _uiState.value = _uiState.value.copy(playbackSpeed = speed)
+        viewModelScope.launch { settingsRepository.setPlaybackSpeed(speed) }
+    }
+
+    fun toggleFavorite() {
+        val current = _uiState.value.file ?: return
+        val next = !current.isFavorite
+        viewModelScope.launch {
+            filesRepository.toggleFavorite(current.id, next).onSuccess {
+                _uiState.value = _uiState.value.copy(file = current.copy(isFavorite = next))
+            }
+        }
     }
 
     /**
