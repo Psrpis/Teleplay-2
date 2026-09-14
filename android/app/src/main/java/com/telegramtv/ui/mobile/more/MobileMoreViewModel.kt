@@ -46,6 +46,7 @@ data class MoreUiState(
     val seriesList: List<SeriesInfo> = emptyList(),
     val selectedSeries: SeriesInfo? = null,
     val selectedSeason: Int = 1,
+    val seriesSort: String = "DATE_DESC", // DATE_DESC, TITLE, SIZE_DESC
 
     // Actors
     val actors: List<MediaTag> = emptyList(),
@@ -132,6 +133,10 @@ class MobileMoreViewModel @Inject constructor(
 
     fun setMovieSort(sort: String) {
         _uiState.update { it.copy(movieSort = sort) }
+    }
+
+    fun setSeriesSort(sort: String) {
+        _uiState.update { it.copy(seriesSort = sort) }
     }
 
     fun loadSeries() {

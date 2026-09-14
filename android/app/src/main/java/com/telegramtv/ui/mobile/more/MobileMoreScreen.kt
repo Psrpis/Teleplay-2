@@ -101,8 +101,40 @@ fun MobileMoreScreen(
                     text = title,
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
+
+                if (uiState.currentSubScreen == MoreSubScreen.SERIES && uiState.selectedSeries != null) {
+                    var showSortMenu by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { showSortMenu = true }) {
+                            Icon(Icons.Filled.Sort, contentDescription = "Sırala")
+                        }
+                        DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                            listOf(
+                                "DATE_DESC" to "Tarih (yeni)",
+                                "TITLE" to "İsim (A-Z)",
+                                "SIZE_DESC" to "Boyut (büyük)"
+                            ).forEach { (key, label) ->
+                                DropdownMenuItem(
+                                    text = { Text(label) },
+                                    onClick = {
+                                        viewModel.setSeriesSort(key)
+                                        showSortMenu = false
+                                    },
+                                    trailingIcon = {
+                                        if (uiState.seriesSort == key) {
+                                            Icon(Icons.Filled.Check, contentDescription = null)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             // Subscreen Contents
@@ -131,6 +163,7 @@ fun MobileMoreScreen(
                         isLoading = uiState.isLoading,
                         selectedSeries = uiState.selectedSeries,
                         selectedSeason = uiState.selectedSeason,
+                        seriesSort = uiState.seriesSort,
                         serverUrl = uiState.serverUrl,
                         onSelectSeries = { viewModel.selectSeries(it) },
                         onSelectSeason = { viewModel.selectSeason(it) },
@@ -569,6 +602,7 @@ private fun SeriesContent(
     isLoading: Boolean,
     selectedSeries: SeriesInfo?,
     selectedSeason: Int,
+    seriesSort: String,
     serverUrl: String,
     onSelectSeries: (SeriesInfo) -> Unit,
     onSelectSeason: (Int) -> Unit,
@@ -667,7 +701,13 @@ private fun SeriesContent(
                 }
             }
 
-            val episodes = selectedSeries.seasons[selectedSeason] ?: emptyList()
+            val episodes = (selectedSeries.seasons[selectedSeason] ?: emptyList()).let { list ->
+                when (seriesSort) {
+                    "TITLE" -> list.sortedBy { it.fileName.lowercase() }
+                    "SIZE_DESC" -> list.sortedByDescending { it.fileSize }
+                    else -> list.sortedByDescending { it.createdAt }
+                }
+            }
             LazyColumn(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
