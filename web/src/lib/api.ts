@@ -513,6 +513,19 @@ export const useAutoTagLibrary = () => {
     });
 };
 
+export const useMergeDuplicateFiles = () => {
+    const queryClient = useQueryClient();
+    return useMutation<{ duplicate_groups_merged: number; files_removed: number }, Error, void>({
+        mutationFn: async () => (await api.post('/media/admin/merge-duplicates')).data,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['media-tags'] });
+            queryClient.invalidateQueries({ queryKey: ['media-home'] });
+            queryClient.invalidateQueries({ queryKey: ['files'] });
+            queryClient.invalidateQueries({ queryKey: ['media-search'] });
+        },
+    });
+};
+
 export const useToggleFavorite = () => {
     const queryClient = useQueryClient();
     return useMutation({

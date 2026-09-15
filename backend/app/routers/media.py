@@ -50,6 +50,7 @@ from ..services import (
     escape_like,
     fetch_continue_watching_files,
     fetch_recent_files,
+    merge_duplicate_files,
     normalize_search_text,
 )
 
@@ -150,6 +151,19 @@ async def start_metadata_backfill(
     """Start metadata extraction using the Telegram client owned by FastAPI lifespan."""
     background_tasks.add_task(backfill_media_metadata)
     return {"status": "started"}
+
+
+@router.post("/admin/merge-duplicates")
+async def merge_duplicates(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Find files that are the same physical Telegram file (same
+    file_unique_id) added more than once by accident, and merge each group
+    into a single entry — keeping favorites, tags, collections and watch
+    history/progress from every copy. The Telegram messages themselves are
+    left untouched."""
+    return await merge_duplicate_files(db, current_user.id)
 
 
 @router.get("/search")

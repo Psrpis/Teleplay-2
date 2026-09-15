@@ -3,8 +3,9 @@ Streaming API endpoints for media playback.
 """
 import re
 import logging
+from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from slowapi import Limiter
@@ -14,7 +15,7 @@ from ..database import get_db
 from ..models import File, User
 from ..auth import verify_media_token, verify_token_payload
 from .. import telegram
-from ..telegram import get_message_from_channel
+from ..telegram import get_message_from_channel, SESSION_DIR
 from ..streaming import stream_file as stream_file_generator
 
 # Logger for internal debugging (not exposed to users)
@@ -24,6 +25,20 @@ logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/stream", tags=["Streaming"])
+
+# Thumbnails are extracted from a live Telegram download the first time they
+# are requested, then cached here (inside the persisted session volume) so
+# every later request — from any client — is served straight off disk.
+THUMB_CACHE_DIR = SESSION_DIR / "thumb_cache"
+
+
+def _write_thumb_cache(cache_path: Path, data: bytes) -> None:
+    """Best-effort disk cache write — a failure here should never break the response."""
+    try:
+        THUMB_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        cache_path.write_bytes(data)
+    except Exception:
+        logger.warning("Could not write thumbnail cache file %s", cache_path, exc_info=True)
 
 
 async def get_stream_user(file_id: int, request: Request, db: AsyncSession) -> User:
@@ -149,17 +164,29 @@ async def get_thumbnail(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    """Get file thumbnail."""
+    """Get file thumbnail.
+
+    Thumbnails are cached to disk on first fetch, keyed by the Telegram
+    thumbnail's own file_id, so a re-tagged/re-thumbnailed file automatically
+    gets a fresh cache entry. Combined with the now-stable media token, this
+    means a given thumbnail is downloaded from Telegram at most once instead
+    of on every single app screen load.
+    """
     current_user = await get_stream_user(file_id, request, db)
     # Get file from database
     result = await db.execute(
         select(File).where(File.id == file_id, File.user_id == current_user.id)
     )
     file = result.scalar_one_or_none()
-    
+
     if not file or not file.thumbnail_file_id:
         raise HTTPException(status_code=404, detail="Thumbnail not found")
-    
+
+    cache_headers = {"Cache-Control": "private, max-age=604800, immutable"}
+    cache_path = THUMB_CACHE_DIR / f"{file.id}_{file.thumbnail_file_id}.jpg"
+    if cache_path.exists():
+        return FileResponse(cache_path, media_type="image/jpeg", headers=cache_headers)
+
     try:
         # Get the message and download thumbnail
         message = await get_message_from_channel(file.channel_message_id)
@@ -176,24 +203,31 @@ async def get_thumbnail(
             thumbnail = message.audio.thumbs[0]
         elif message.photo:
             thumbnail = message.photo[-1]  # Use best quality photo
-            
+
         if not thumbnail:
             # Try using the file_id directly if stored (fallback)
             if file.thumbnail_file_id:
                 try:
                     thumb_bytes = await telegram.tg_client.download_media(file.thumbnail_file_id, in_memory=True)
-                    return Response(content=thumb_bytes.getvalue(), media_type="image/jpeg")
+                    data = thumb_bytes.getvalue()
+                    _write_thumb_cache(cache_path, data)
+                    return Response(content=data, media_type="image/jpeg", headers=cache_headers)
                 except Exception:
                     pass
             raise HTTPException(status_code=404, detail="Thumbnail not found in message")
-        
+
         # Download thumbnail to memory
         thumb_bytes = await telegram.tg_client.download_media(thumbnail.file_id, in_memory=True)
-        
+        data = thumb_bytes.getvalue()
+        _write_thumb_cache(cache_path, data)
+
         return Response(
-            content=thumb_bytes.getvalue(),
-            media_type="image/jpeg"
+            content=data,
+            media_type="image/jpeg",
+            headers=cache_headers,
         )
+    except HTTPException:
+        raise
     except Exception as e:
         # Log error internally, don't expose details to users
         logger.error(f"Thumbnail error for file {file_id}: {e}")

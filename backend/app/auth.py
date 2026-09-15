@@ -2,6 +2,7 @@
 JWT authentication utilities.
 """
 from datetime import datetime, timedelta
+import time
 from typing import Optional
 
 from jose import jwt, JWTError
@@ -49,8 +50,19 @@ def create_media_token(user_id: int, file_id: int, lifetime_seconds: int = 43200
 
     Media URLs are embedded in home, browse, and details responses, so the
     token must remain valid while a client browses before pressing play.
+
+    The expiry is rounded down to a fixed bucket (instead of "now + lifetime"
+    computed fresh on every call) so the same user/file pair gets the exact
+    same token — and therefore the exact same thumbnail/stream URL — for the
+    whole bucket window. Without this, every list/browse response minted a
+    brand-new token, so the URL changed on every request and clients (Coil on
+    Android, browser HTTP cache) could never get a cache hit on a thumbnail,
+    forcing a fresh Telegram download every single time.
     """
-    expire = datetime.utcnow() + timedelta(seconds=lifetime_seconds)
+    bucket_seconds = 3600  # tokens (and thus URLs) stay identical for up to 1 hour
+    now_ts = time.time()
+    bucket_start_ts = now_ts - (now_ts % bucket_seconds)
+    expire = datetime.utcfromtimestamp(bucket_start_ts + lifetime_seconds)
     payload = {
         "uid": user_id,
         "fid": file_id,

@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete, select, desc, func, or_, and_
 from sqlalchemy.orm import selectinload
 
-from .models import File, WatchProgress, Folder, FileTag, Tag, MediaMetadata
+from .models import File, WatchProgress, Folder, FileTag, Tag, MediaMetadata, Favorite, WatchHistory, CollectionItem
 from .auth import create_media_token
 from .database import async_session
 from . import telegram
@@ -478,3 +478,101 @@ async def backfill_media_metadata(db: AsyncSession | None = None) -> None:
     finally:
         if owns_session:
             await session.close()
+
+
+async def merge_duplicate_files(db: AsyncSession, user_id: int) -> dict:
+    """Find files with the same Telegram file_unique_id for this user (the
+    same physical file added more than once by accident) and merge them
+    into a single entry: favorites/tags/collections/watch history/progress
+    from the extra copies are folded into the oldest copy, then the extra
+    File rows are deleted. The underlying Telegram messages are left alone.
+    """
+    result = await db.execute(
+        select(File.file_unique_id)
+        .where(File.user_id == user_id)
+        .group_by(File.file_unique_id)
+        .having(func.count(File.id) > 1)
+    )
+    duplicate_unique_ids = [row[0] for row in result.all()]
+
+    groups_merged = 0
+    files_removed = 0
+
+    for unique_id in duplicate_unique_ids:
+        result = await db.execute(
+            select(File)
+            .where(File.user_id == user_id, File.file_unique_id == unique_id)
+            .options(
+                selectinload(File.watch_progress),
+                selectinload(File.favorite_links),
+                selectinload(File.tag_links),
+                selectinload(File.collection_links),
+                selectinload(File.media_metadata),
+            )
+            .order_by(File.id.asc())
+        )
+        copies = result.scalars().all()
+        if len(copies) < 2:
+            continue
+
+        keeper, extras = copies[0], copies[1:]
+        groups_merged += 1
+
+        for dup in extras:
+            # Watch progress: keep the furthest-along position.
+            for progress in dup.watch_progress:
+                keeper_progress = next((p for p in keeper.watch_progress if p.user_id == progress.user_id), None)
+                if keeper_progress is None:
+                    progress.file_id = keeper.id
+                    keeper.watch_progress.append(progress)
+                else:
+                    if (progress.position or 0) > (keeper_progress.position or 0):
+                        keeper_progress.position = progress.position
+                        keeper_progress.duration = progress.duration
+                        keeper_progress.completed = keeper_progress.completed or progress.completed
+                    await db.delete(progress)
+
+            # Favorite: keep a single favorite link if either copy was favorited.
+            for fav in dup.favorite_links:
+                if not any(f.user_id == fav.user_id for f in keeper.favorite_links):
+                    fav.file_id = keeper.id
+                    keeper.favorite_links.append(fav)
+                else:
+                    await db.delete(fav)
+
+            # Tags: union of both copies' tags on the keeper.
+            for link in dup.tag_links:
+                if not any(t.tag_id == link.tag_id for t in keeper.tag_links):
+                    link.file_id = keeper.id
+                    keeper.tag_links.append(link)
+                else:
+                    await db.delete(link)
+
+            # Collections: keeper ends up in every collection either copy was in.
+            for item in dup.collection_links:
+                if not any(c.collection_id == item.collection_id for c in keeper.collection_links):
+                    item.file_id = keeper.id
+                    keeper.collection_links.append(item)
+                else:
+                    await db.delete(item)
+
+            # Watch history: no uniqueness constraint, just repoint entries.
+            await db.execute(
+                WatchHistory.__table__.update().where(WatchHistory.file_id == dup.id).values(file_id=keeper.id)
+            )
+
+            # Metadata: keep the keeper's if it has any, otherwise adopt the duplicate's.
+            if dup.media_metadata and not keeper.media_metadata:
+                dup.media_metadata.file_id = keeper.id
+                keeper.media_metadata = dup.media_metadata
+            elif dup.media_metadata:
+                await db.delete(dup.media_metadata)
+
+            await db.flush()
+            await db.delete(dup)
+            files_removed += 1
+
+    if groups_merged:
+        await db.commit()
+
+    return {"duplicate_groups_merged": groups_merged, "files_removed": files_removed}

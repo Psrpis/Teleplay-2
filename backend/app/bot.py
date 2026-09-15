@@ -15,7 +15,7 @@ from .database import async_session
 from .models import User, File, Folder, LoginCode
 from .config import get_settings
 from .auth import create_access_token
-from .services import auto_tag_file, classify_media_type
+from .services import auto_tag_file, classify_media_type, merge_duplicate_files
 
 settings = get_settings()
 
@@ -219,7 +219,8 @@ async def help_command(client, message: Message):
         "**File Management:**\n"
         "• /myfiles - List your recent files with IDs\n"
         "• /file `<id>` - Manage a specific file\n"
-        "  ↳ Rename, Move, Delete, Open Web\n\n"
+        "  ↳ Rename, Move, Delete, Open Web\n"
+        "• /dedupe - Merge accidentally duplicated files\n\n"
         
         "**Folder Management:**\n"
         "• /folders - Browse all folders\n"
@@ -497,6 +498,32 @@ async def logout_all_command(client, message: Message):
         ])
     )
 
+@tg_client.on_message(filters.command("dedupe") & filters.private)
+async def dedupe_command(client, message: Message):
+    """Find and merge files that were accidentally added more than once
+    (same physical Telegram file, same file_unique_id)."""
+    user = await get_or_create_user(
+        message.from_user.id,
+        message.from_user.username,
+        message.from_user.first_name,
+        message.from_user.last_name,
+    )
+    status_msg = await message.reply("🔍 Scanning your library for duplicate files...")
+    async with async_session() as db:
+        result = await merge_duplicate_files(db, user.id)
+    groups = result["duplicate_groups_merged"]
+    removed = result["files_removed"]
+    if groups == 0:
+        await status_msg.edit_text("✅ No duplicate files found. Your library is clean.")
+    else:
+        await status_msg.edit_text(
+            f"✅ **Cleanup complete**\n\n"
+            f"Merged {groups} duplicate file{'s' if groups != 1 else ''}, "
+            f"removed {removed} extra entr{'ies' if removed != 1 else 'y'}.\n"
+            f"Favorites, tags, collections and watch progress were kept."
+        )
+
+
 # ============== File Handler ==============
 
 @tg_client.on_message(filters.private & (filters.video | filters.audio | filters.document | filters.photo))
@@ -529,7 +556,25 @@ async def handle_file(client, message: Message):
         return
     
     status_msg = await message.reply("📥 Processing file...")
-    
+
+    # Duplicate guard: if this exact Telegram file was already added by this
+    # user (same file_unique_id, e.g. re-sending or forwarding the same
+    # video twice by mistake), don't forward/insert a second copy.
+    media_unique_id = getattr(media, "file_unique_id", None)
+    if media_unique_id:
+        async with async_session() as db:
+            existing = await db.execute(
+                select(File).where(File.user_id == user.id, File.file_unique_id == media_unique_id)
+            )
+            existing_file = existing.scalars().first()
+        if existing_file:
+            await status_msg.edit_text(
+                f"⚠️ **Already in your library**\n\n"
+                f"This exact file matches **{existing_file.file_name}**, added earlier.\n"
+                f"Skipped so you don't get a duplicate entry."
+            )
+            return
+
     try:
         # Forward to storage channel
         forwarded = await forward_to_storage_channel(message)
