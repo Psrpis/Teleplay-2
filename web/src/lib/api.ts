@@ -504,7 +504,17 @@ export const useMediaTags = (kind?: MediaTag['kind']) => useQuery<MediaTag[]>({
 export const useAutoTagLibrary = () => {
     const queryClient = useQueryClient();
     return useMutation<unknown, Error, number | undefined>({
-        mutationFn: async (limit = 5000) => (await api.post('/media/auto-tag', null, { params: { limit } })).data,
+        mutationFn: async (limit = 5000) => {
+            let offset = 0;
+            let processed = 0;
+            while (true) {
+                const { data } = await api.post('/media/auto-tag', null, { params: { limit, offset } });
+                processed += data.length;
+                if (data.length < limit) break;
+                offset += data.length;
+            }
+            return processed;
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['media-tags'] });
             queryClient.invalidateQueries({ queryKey: ['media-home'] });

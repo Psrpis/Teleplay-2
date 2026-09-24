@@ -83,9 +83,11 @@ SERIES_PREFIX_ALIASES = {
     "mypovfam": "MyPOVFam",
     "onlyfans": "OnlyFans",
     "pervertedpov": "PervertedPOV",
+    "primalfetish": "PrimalFetish",
     "scottstark householdfantasy": "ScottStark HouseholdFantasy",
     "sexwithmuslims": "SexWithMuslims",
     "xvideosred": "XVideosRed",
+    "houseofy re": "HouseOfFyre",
 }
 
 
@@ -104,6 +106,8 @@ def canonical_series_name(value: str) -> str:
     for alias_key, canonical in SERIES_PREFIX_ALIASES.items():
         alias_compact = re.sub(r"[^a-z0-9]+", "", alias_key.casefold())
         if compact_key == alias_compact or compact_without_counter == alias_compact:
+            return canonical
+        if compact_key.startswith(alias_compact):
             return canonical
         prefix = re.match(rf"^{re.escape(alias_key)}(?:\s|$)", cleaned, re.IGNORECASE)
         if prefix:

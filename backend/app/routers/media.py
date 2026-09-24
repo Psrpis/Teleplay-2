@@ -522,10 +522,11 @@ async def auto_tag_single_file(file_id: int, db: AsyncSession = Depends(get_db),
 @router.post("/auto-tag", response_model=list[AutoTagResponse])
 async def auto_tag_library(
     limit: int = Query(500, ge=1, le=5000),
+    offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     result = await db.execute(
-        select(File).where(File.user_id == current_user.id).options(*_file_options()).order_by(File.created_at.desc()).limit(limit)
+        select(File).where(File.user_id == current_user.id).options(*_file_options()).order_by(File.created_at.desc()).offset(offset).limit(limit)
     )
     files = result.scalars().unique().all()
     output = []
