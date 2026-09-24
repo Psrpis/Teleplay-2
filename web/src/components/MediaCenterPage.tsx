@@ -55,7 +55,7 @@ export default function MediaCenterPage() {
                 {isLoading ? <DashboardSkeleton /> : isError ? <ErrorState onRetry={() => refetch()} /> : (
                     <div className="pb-24 md:pb-16">
                         {hero ? <section className="relative isolate min-h-[420px] overflow-hidden sm:min-h-[500px]">
-                            {heroArt ? <img src={heroArt} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-65" /> : <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_20%_20%,#147d51,#0d1f18_50%,#030805)]" />}
+                            {heroArt ? <img src={heroArt} alt="" fetchPriority="high" decoding="async" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-65" /> : <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_20%_20%,#147d51,#0d1f18_50%,#030805)]" />}
                             <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,#030805_0%,rgba(3,8,5,.82)_35%,rgba(3,8,5,.2)_75%),linear-gradient(0deg,#030805_0%,transparent_65%)]" />
                             <div className="flex min-h-[420px] max-w-3xl flex-col justify-end px-6 pb-12 sm:min-h-[500px] sm:px-12 sm:pb-16 lg:px-16">
                                 <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-primary-200"><Sparkles className="h-4 w-4" /> Featured from your library</div>

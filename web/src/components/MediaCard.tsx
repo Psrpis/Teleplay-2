@@ -34,7 +34,7 @@ export default function MediaCard({ file, compact = false, showFilename = false 
             >
                 <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/[0.08] bg-dark-800 shadow-lg shadow-black/20 transition duration-300 group-hover:-translate-y-1 group-hover:border-primary-400/40 group-hover:shadow-primary-950/40">
                     {artwork ? (
-                        <img src={artwork} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
+                        <img src={artwork} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" decoding="async" />
                     ) : (
                         <div className="flex h-full items-end bg-[radial-gradient(circle_at_top,#147d51,#0d1f18_58%,#030805)] p-4">
                             <span className="line-clamp-3 text-left text-lg font-semibold text-white">{title}</span>

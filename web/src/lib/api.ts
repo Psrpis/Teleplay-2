@@ -458,7 +458,7 @@ export const useClearContinueWatching = () => {
 export const useMediaHome = (limit = 20) => useQuery<MediaHome>({
     queryKey: ['media-home', limit],
     queryFn: async () => (await api.get<MediaHome>('/media/home', { params: { limit } })).data,
-    staleTime: 30000,
+    staleTime: 1000 * 60 * 2,
 });
 
 export const usePreferences = () => useQuery<Record<string, string>>({
@@ -479,26 +479,26 @@ export const useSetPreference = () => {
 export const useFavorites = () => useQuery<TelegramFile[]>({
     queryKey: ['favorites'],
     queryFn: async () => (await api.get<TelegramFile[]>('/media/favorites')).data,
-    staleTime: 30000,
+    staleTime: 1000 * 60 * 2,
 });
 
 export const useHistory = (query = '') => useQuery<HistoryEntry[]>({
     queryKey: ['history', query],
     queryFn: async () => (await api.get<HistoryEntry[]>('/media/history', { params: { q: query || undefined } })).data,
-    staleTime: 30000,
+    staleTime: 1000 * 60 * 2,
 });
 
 export const useMediaSearch = (query: string, filters: Record<string, string | number | boolean | undefined> = {}) => useQuery<FileListResponse>({
     queryKey: ['media-search', query, filters],
     queryFn: async () => (await api.get<FileListResponse>('/media/search', { params: { q: query, ...filters } })).data,
     enabled: query.trim().length > 0 || Object.values(filters).some((value) => value !== undefined),
-    staleTime: 15000,
+    staleTime: 1000 * 60,
 });
 
 export const useMediaTags = (kind?: MediaTag['kind']) => useQuery<MediaTag[]>({
     queryKey: ['media-tags', kind],
     queryFn: async () => (await api.get<MediaTag[]>('/media/tags', { params: { kind } })).data,
-    staleTime: 60000,
+    staleTime: 1000 * 60 * 5,
 });
 
 export const useAutoTagLibrary = () => {
