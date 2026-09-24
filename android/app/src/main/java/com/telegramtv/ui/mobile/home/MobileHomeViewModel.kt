@@ -10,6 +10,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import android.content.Context
@@ -98,13 +100,14 @@ class MobileHomeViewModel @Inject constructor(
             }
             
             if (folderId == null) {
-                // Root
-                val foldersResult = foldersRepository.getFolders(parentId = null)
-                val filesResult = filesRepository.getFiles(folderId = null)
-                
-                // Fetch the consolidated media-center dashboard so Android has the
-                // same sections as the Web client (hero, favorites, history, collections).
-                val mediaHomeResult = filesRepository.getMediaHome()
+                // Root — these three calls are independent, so fire them
+                // together instead of waiting on each one in turn.
+                val (foldersResult, filesResult, mediaHomeResult) = coroutineScope {
+                    val foldersDeferred = async { foldersRepository.getFolders(parentId = null) }
+                    val filesDeferred = async { filesRepository.getFiles(folderId = null) }
+                    val mediaHomeDeferred = async { filesRepository.getMediaHome() }
+                    Triple(foldersDeferred.await(), filesDeferred.await(), mediaHomeDeferred.await())
+                }
 
                 if (foldersResult.isSuccess && filesResult.isSuccess) {
                     val allFiles = filesResult.getOrNull()?.items ?: emptyList()

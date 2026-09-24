@@ -37,6 +37,7 @@ from ..schemas import (
     HistoryResponse,
     MetadataUpdate,
     PreferenceUpdate,
+    SeriesSummary,
     TagAssignment,
     TagCreate,
     TagResponse,
@@ -553,15 +554,54 @@ async def list_tags(
     )
     if orphan_cleanup.rowcount:
         await db.commit()
-    result = await db.execute(
+    query = (
         select(Tag, func.count(FileTag.id))
         .outerjoin(FileTag)
         .where(Tag.user_id == current_user.id)
-        .group_by(Tag.id)
+    )
+    if kind:
+        query = query.where(Tag.name.like(f"{escape_like(kind)}:%", escape="\\"))
+    result = await db.execute(
+        query.group_by(Tag.id)
         .having(func.count(FileTag.id) > 0)
         .order_by(Tag.name)
     )
-    return [TagResponse(id=tag.id, name=tag.name.split(":", 1)[-1], created_at=tag.created_at, file_count=count, kind=_tag_kind(tag.name), value=tag.name) for tag, count in result.all() if not kind or _tag_kind(tag.name) == kind]
+    return [TagResponse(id=tag.id, name=tag.name.split(":", 1)[-1], created_at=tag.created_at, file_count=count, kind=_tag_kind(tag.name), value=tag.name) for tag, count in result.all()]
+
+
+@router.get("/series/summary", response_model=list[SeriesSummary])
+async def series_summary(
+    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    """One query, constant cost regardless of library size: series name,
+    episode count and the newest episode's date, without pulling every
+    episode's full file/media rows. Used to render the series grid instantly;
+    season/episode detail is fetched separately only once a series is opened.
+    """
+    result = await db.execute(
+        select(Tag.name, File.id, File.created_at, MediaMetadata.poster_url)
+        .join(FileTag, FileTag.tag_id == Tag.id)
+        .join(File, File.id == FileTag.file_id)
+        .outerjoin(MediaMetadata, MediaMetadata.file_id == File.id)
+        .where(Tag.user_id == current_user.id, Tag.name.like("series:%"), File.user_id == current_user.id)
+    )
+    grouped: dict[str, dict] = {}
+    for tag_name, _file_id, created_at, poster in result.all():
+        group = grouped.setdefault(tag_name, {"count": 0, "updated_at": created_at, "poster": poster})
+        group["count"] += 1
+        if created_at > group["updated_at"]:
+            group["updated_at"] = created_at
+        group["poster"] = group["poster"] or poster
+    return [
+        SeriesSummary(
+            name=name.split(":", 1)[-1],
+            tag_value=name,
+            episode_count=group["count"],
+            updated_at=group["updated_at"],
+            poster_url=group["poster"],
+        )
+        for name, group in grouped.items()
+    ]
 
 
 @router.post("/admin/cleanup-orphaned-tags")

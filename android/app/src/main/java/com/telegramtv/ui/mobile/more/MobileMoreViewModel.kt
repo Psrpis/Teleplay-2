@@ -28,7 +28,8 @@ data class SeriesInfo(
     val name: String,
     val totalEpisodes: Int,
     val seasons: Map<Int, List<FileItem>>,
-    val posterUrl: String? = null
+    val posterUrl: String? = null,
+    val tagValue: String? = null
 )
 
 data class MoreUiState(
@@ -45,6 +46,7 @@ data class MoreUiState(
     // Series
     val seriesList: List<SeriesInfo> = emptyList(),
     val selectedSeries: SeriesInfo? = null,
+    val isLoadingDetail: Boolean = false,
     val selectedSeason: Int = 1,
     val seriesSort: String = "DATE_DESC", // DATE_DESC, TITLE, SIZE_DESC
 
@@ -70,7 +72,8 @@ data class MoreUiState(
 class MobileMoreViewModel @Inject constructor(
     private val filesRepository: FilesRepository,
     private val settingsRepository: SettingsRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val mediaCacheStore: com.telegramtv.data.repository.MediaCacheStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MoreUiState())
@@ -141,71 +144,43 @@ class MobileMoreViewModel @Inject constructor(
 
     fun loadSeries() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val seriesTags = filesRepository.getMediaTags(kind = "series").getOrNull().orEmpty()
-            val taggedSeries = seriesTags.mapNotNull { tag ->
-                val files = filesRepository.searchMedia(
-                    query = "",
-                    fileType = "video",
-                    tag = tag.value ?: tag.name
-                ).getOrNull().orEmpty()
-                if (files.isEmpty()) null else tag.name to files
-            }.toMap()
-            val allVideos = if (taggedSeries.isNotEmpty()) {
-                taggedSeries.values.flatten().distinctBy { it.id }
+            // Show whatever we cached from last time immediately, if any.
+            val cached = mediaCacheStore.getCachedSeries()
+            if (cached.isNotEmpty()) {
+                _uiState.update { it.copy(seriesList = cached.toSeriesInfoList(), isLoading = false) }
             } else {
-                loadAllVideoFiles()
+                _uiState.update { it.copy(isLoading = true) }
             }
 
-            // Group by series: check metadata.title (or parse file name / metadata.mediaType)
-            val seriesMap = mutableMapOf<String, MutableList<FileItem>>()
-            for (file in allVideos) {
-                val seriesName = file.metadata?.let { meta ->
-                    if (meta.mediaType?.equals("episode", true) == true ||
-                        meta.mediaType?.equals("tv", true) == true ||
-                        meta.mediaType?.equals("series", true) == true ||
-                        meta.season != null || meta.episode != null
-                    ) {
-                        cleanSeriesName(meta.originalTitle ?: meta.title ?: file.fileName)
-                    } else null
-                } ?: run {
-                    // Fallback parse e.g. "Breaking Bad S01E01"
-                    val name = file.fileName
-                    if (Regex("S\\d{1,2}E\\d{1,2}", RegexOption.IGNORE_CASE).containsMatchIn(name)) {
-                        cleanSeriesName(name)
-                    } else null
-                }
-
-                if (seriesName != null && seriesName.isNotBlank()) {
-                    seriesMap.getOrPut(seriesName) { mutableListOf() }.add(file)
-                }
+            // One cheap, constant-cost query regardless of library size.
+            val fresh = filesRepository.getSeriesSummary().getOrNull()
+            if (fresh == null) {
+                if (cached.isEmpty()) _uiState.update { it.copy(isLoading = false) }
+                return@launch
             }
 
-            val seriesInfoList = if (taggedSeries.isNotEmpty()) {
-                taggedSeries.map { (name, episodes) ->
-                    val seasonsGrouped = episodes.groupBy { it.metadata?.season ?: 1 }
-                    SeriesInfo(
-                        name = name,
-                        totalEpisodes = episodes.size,
-                        seasons = seasonsGrouped,
-                        posterUrl = episodes.firstOrNull()?.thumbnailUrl ?: episodes.firstOrNull()?.effectivePosterUrl
-                    )
-                }
-            } else seriesMap.map { (name, episodes) ->
-                val seasonsGrouped = episodes.groupBy { it.metadata?.season ?: 1 }
-                val poster = episodes.firstOrNull()?.thumbnailUrl
-                    ?: episodes.firstOrNull()?.effectivePosterUrl
-                SeriesInfo(
-                    name = name,
-                    totalEpisodes = episodes.size,
-                    seasons = seasonsGrouped,
-                    posterUrl = poster
-                )
-            }.sortedBy { it.name }
-
-            _uiState.update { it.copy(seriesList = seriesInfoList, isLoading = false) }
+            val changed = fresh.size != cached.size || fresh.any { f ->
+                cached.none { it.tagValue == f.tagValue && it.episodeCount == f.episodeCount }
+            }
+            if (changed) {
+                _uiState.update { it.copy(seriesList = fresh.toSeriesInfoList(), isLoading = false) }
+                mediaCacheStore.saveSeries(fresh)
+            } else {
+                _uiState.update { it.copy(isLoading = false) }
+            }
         }
     }
+
+    private fun List<com.telegramtv.data.model.SeriesSummary>.toSeriesInfoList(): List<SeriesInfo> =
+        map { summary ->
+            SeriesInfo(
+                name = summary.name,
+                totalEpisodes = summary.episodeCount,
+                seasons = emptyMap(),
+                posterUrl = summary.posterUrl,
+                tagValue = summary.tagValue
+            )
+        }.sortedBy { it.name }
 
     private suspend fun loadAllVideoFiles(): List<FileItem> {
         val videos = mutableListOf<FileItem>()
@@ -232,8 +207,24 @@ class MobileMoreViewModel @Inject constructor(
         .trim()
 
     fun selectSeries(series: SeriesInfo) {
-        val initialSeason = series.seasons.keys.minOrNull() ?: 1
-        _uiState.update { it.copy(selectedSeries = series, selectedSeason = initialSeason) }
+        // Episodes weren't fetched for the grid (just name/count/poster), so
+        // pull them now — only for the one series the user actually opened.
+        _uiState.update { it.copy(selectedSeries = series, isLoadingDetail = true) }
+        viewModelScope.launch {
+            val episodes = filesRepository.searchMedia(
+                query = "",
+                tag = series.tagValue ?: series.name
+            ).getOrNull().orEmpty()
+            val seasons = episodes.groupBy { it.metadata?.season ?: 1 }
+            val initialSeason = seasons.keys.minOrNull() ?: 1
+            _uiState.update {
+                it.copy(
+                    selectedSeries = series.copy(seasons = seasons, totalEpisodes = episodes.size),
+                    selectedSeason = initialSeason,
+                    isLoadingDetail = false
+                )
+            }
+        }
     }
 
     fun selectSeason(season: Int) {
@@ -242,10 +233,25 @@ class MobileMoreViewModel @Inject constructor(
 
     fun loadActors() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val result = filesRepository.getMediaTags(kind = "actor")
-            val tags = result.getOrNull() ?: emptyList()
-            _uiState.update { it.copy(actors = tags, isLoading = false) }
+            val cached = mediaCacheStore.getCachedActors()
+            if (cached.isNotEmpty()) {
+                _uiState.update { it.copy(actors = cached, isLoading = false) }
+            } else {
+                _uiState.update { it.copy(isLoading = true) }
+            }
+            val fresh = filesRepository.getMediaTags(kind = "actor").getOrNull() ?: run {
+                if (cached.isEmpty()) _uiState.update { it.copy(isLoading = false) }
+                return@launch
+            }
+            val changed = fresh.size != cached.size || fresh.any { f ->
+                cached.none { it.name == f.name && it.fileCount == f.fileCount }
+            }
+            if (changed) {
+                _uiState.update { it.copy(actors = fresh, isLoading = false) }
+                mediaCacheStore.saveActors(fresh)
+            } else {
+                _uiState.update { it.copy(isLoading = false) }
+            }
         }
     }
 

@@ -116,6 +116,16 @@ class FilesRepository @Inject constructor(
         }
     }
 
+    suspend fun getSeriesSummary(): Result<List<com.telegramtv.data.model.SeriesSummary>> {
+        return try {
+            val response = api.getSeriesSummary()
+            if (response.isSuccessful) Result.success(response.body() ?: emptyList())
+            else Result.failure(Exception("Failed to load series summary"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun autoTagLibrary(limit: Int = 5000): Result<List<AutoTagResponse>> {
         return try {
             val response = api.autoTagLibrary(limit)

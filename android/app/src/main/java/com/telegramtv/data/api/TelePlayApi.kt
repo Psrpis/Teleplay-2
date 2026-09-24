@@ -203,6 +203,9 @@ interface TelePlayApi {
     @GET("media/tags")
     suspend fun getMediaTags(@Query("kind") kind: String? = null): Response<List<MediaTag>>
 
+    @GET("media/series/summary")
+    suspend fun getSeriesSummary(): Response<List<com.telegramtv.data.model.SeriesSummary>>
+
     @POST("media/auto-tag")
     suspend fun autoTagLibrary(@Query("limit") limit: Int = 5000): Response<List<AutoTagResponse>>
 

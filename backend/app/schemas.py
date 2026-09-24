@@ -246,6 +246,14 @@ class TagResponse(BaseModel):
     value: Optional[str] = None
 
 
+class SeriesSummary(BaseModel):
+    name: str
+    tag_value: str  # e.g. "series:Breaking Bad" — pass straight to the tag filter
+    episode_count: int
+    updated_at: datetime  # created_at of the most recently added episode
+    poster_url: Optional[str] = None
+
+
 class TagAssignment(BaseModel):
     tag_ids: List[int] = Field(default_factory=list, max_length=100)
 

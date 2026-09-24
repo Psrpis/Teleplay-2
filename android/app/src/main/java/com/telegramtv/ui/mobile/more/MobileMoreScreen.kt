@@ -162,6 +162,7 @@ fun MobileMoreScreen(
                         seriesList = uiState.seriesList,
                         isLoading = uiState.isLoading,
                         selectedSeries = uiState.selectedSeries,
+                        isLoadingDetail = uiState.isLoadingDetail,
                         selectedSeason = uiState.selectedSeason,
                         seriesSort = uiState.seriesSort,
                         serverUrl = uiState.serverUrl,
@@ -601,6 +602,7 @@ private fun SeriesContent(
     seriesList: List<SeriesInfo>,
     isLoading: Boolean,
     selectedSeries: SeriesInfo?,
+    isLoadingDetail: Boolean,
     selectedSeason: Int,
     seriesSort: String,
     serverUrl: String,
@@ -678,6 +680,10 @@ private fun SeriesContent(
                     }
                 }
             }
+        }
+    } else if (isLoadingDetail && selectedSeries.seasons.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
     } else {
         // Series Detail: Seasons & Episodes

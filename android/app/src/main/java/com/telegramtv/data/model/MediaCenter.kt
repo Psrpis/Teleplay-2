@@ -36,6 +36,14 @@ data class MediaTag(
     @SerializedName("file_count") val fileCount: Int = 0
 )
 
+data class SeriesSummary(
+    @SerializedName("name") val name: String,
+    @SerializedName("tag_value") val tagValue: String,
+    @SerializedName("episode_count") val episodeCount: Int,
+    @SerializedName("updated_at") val updatedAt: String,
+    @SerializedName("poster_url") val posterUrl: String? = null
+)
+
 data class AutoTagResponse(
     @SerializedName("file_id") val fileId: Int,
     @SerializedName("series") val series: String? = null,
