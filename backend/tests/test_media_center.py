@@ -72,6 +72,20 @@ def test_parse_filename_facets_supports_date_based_names_without_regressing_epis
     assert parse_filename_facets("Family.Reunion.2024.mp4")["series"] == "Family Reunion 2024"
 
 
+def test_parse_filename_facets_canonicalizes_known_series_prefix_variants():
+    samples = {
+        "LatinaMILF 2024 Megan Fiore And Sara Blonde Futanari Pisser XXX1.mp4": "LatinaMilf",
+        "LifeSelector 2024 Lilly Bell A Day With Lilly Bell XXX1.mp4": "LifeSelector",
+        "LucidFlix91.mp4": "LucidFlix",
+        "MyPOVFam E53 Kiki Cali XXX.mp4": "MyPOVFam",
+        "ScottStark HouseholdFantasy Madison Wilde Napping Step Daughter.mp4": "ScottStark HouseholdFantasy",
+        "SexWithMuslims E318 Sophia Veller CZECH XXX.mp4": "SexWithMuslims",
+        "XVideosRED 2025 Scarlett Venom Moovin Into Your Heart XXX2.mp4": "XVideosRed",
+    }
+    for filename, expected in samples.items():
+        assert parse_filename_facets(filename)["series"] == expected
+
+
 def test_auto_tag_file_replaces_stale_generated_facets():
     async def run_test():
         engine = create_async_engine("sqlite+aiosqlite:///:memory:")

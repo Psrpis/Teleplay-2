@@ -74,6 +74,43 @@ def parse_episode_reference(file_name: str) -> Optional[dict]:
     return None
 
 
+SERIES_PREFIX_ALIASES = {
+    "latinamilf": "LatinaMilf",
+    "lifeselector": "LifeSelector",
+    "lucidflix": "LucidFlix",
+    "mylfseeker": "MYLFSeeker",
+    "manyvids": "ManyVids",
+    "mypovfam": "MyPOVFam",
+    "onlyfans": "OnlyFans",
+    "pervertedpov": "PervertedPOV",
+    "scottstark householdfantasy": "ScottStark HouseholdFantasy",
+    "sexwithmuslims": "SexWithMuslims",
+    "xvideosred": "XVideosRed",
+}
+
+
+def canonical_series_name(value: str) -> str:
+    """Collapse known filename variants into one stable Series tag.
+
+    Many libraries contain compact publisher/brand prefixes followed by a
+    date, episode number, or title.  A trailing scrape counter (for example
+    ``XVideosRed1``) and inconsistent casing previously produced separate
+    tags for the same series.  Only known compact prefixes are normalized so
+    ordinary titles containing meaningful numbers remain untouched.
+    """
+    cleaned = re.sub(r"\s+", " ", value).strip(" ._-")
+    compact_key = re.sub(r"[^a-z0-9]+", "", cleaned.casefold())
+    compact_without_counter = re.sub(r"\d+$", "", compact_key)
+    for alias_key, canonical in SERIES_PREFIX_ALIASES.items():
+        alias_compact = re.sub(r"[^a-z0-9]+", "", alias_key.casefold())
+        if compact_key == alias_compact or compact_without_counter == alias_compact:
+            return canonical
+        prefix = re.match(rf"^{re.escape(alias_key)}(?:\s|$)", cleaned, re.IGNORECASE)
+        if prefix:
+            return canonical
+    return cleaned
+
+
 def parse_filename_facets(file_name: str) -> dict:
     """Extract searchable series, episode, actor, quality, and codec facets.
 
@@ -120,7 +157,7 @@ def parse_filename_facets(file_name: str) -> dict:
     quality = (technical_match.group(0).lower().replace(" ", "") if technical_match else None)
     codecs = re.findall(r"(?i)\b(?:x264|x265|h264|h265|hevc|avc)\b", stem)
     facets = {
-        "series": series_title,
+        "series": canonical_series_name(series_title),
         "actors": actors,
         "season": episode["season"] if episode else None,
         "episode": episode["episode"] if episode else None,
