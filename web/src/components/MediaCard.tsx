@@ -6,6 +6,7 @@ interface MediaCardProps {
     file: TelegramFile;
     compact?: boolean;
     showFilename?: boolean;
+    grid?: boolean;
 }
 
 function artworkFor(file: TelegramFile) {
@@ -15,7 +16,7 @@ function artworkFor(file: TelegramFile) {
     return `${window.location.origin}/${source}`;
 }
 
-export default function MediaCard({ file, compact = false, showFilename = false }: MediaCardProps) {
+export default function MediaCard({ file, compact = false, showFilename = false, grid = false }: MediaCardProps) {
     const setPreviewFile = useAppStore((state) => state.setPreviewFile);
     const favoriteMutation = useToggleFavorite();
     const watchedMutation = useSetWatched();
@@ -25,7 +26,7 @@ export default function MediaCard({ file, compact = false, showFilename = false 
     const isPlayable = file.file_type === 'video' || file.file_type === 'audio';
 
     return (
-        <article className={`group relative shrink-0 ${compact ? 'w-52 sm:w-60' : 'w-60 sm:w-72 md:w-80'}`}>
+        <article className={`group relative min-w-0 ${grid ? 'w-full' : `shrink-0 ${compact ? 'w-52 sm:w-60' : 'w-60 sm:w-72 md:w-80'}`}`}>
             <button
                 type="button"
                 className="w-full text-left focus-ring"
