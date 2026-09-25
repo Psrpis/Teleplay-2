@@ -88,6 +88,7 @@ SERIES_PREFIX_ALIASES = {
     "sexwithmuslims": "SexWithMuslims",
     "xvideosred": "XVideosRed",
     "houseofy re": "HouseOfFyre",
+    "houseofyre": "HouseOfFyre",
 }
 
 
@@ -182,6 +183,23 @@ async def auto_tag_file(db: AsyncSession, file: File) -> dict:
         tag_names.append(f"quality:{facets['quality']}")
     if facets["codec"]:
         tag_names.append(f"codec:{facets['codec']}")
+    # Series names are derived from filenames. Replace every previous derived
+    # Series link explicitly so a renamed/canonicalized tag cannot survive a
+    # retag pass alongside the new value.
+    old_series_links = await db.execute(
+        select(FileTag, Tag)
+        .join(FileTag.tag)
+        .where(FileTag.file_id == file.id, Tag.name.like("series:%"))
+    )
+    old_series_tags: dict[int, Tag] = {}
+    for link, tag in old_series_links.all():
+        old_series_tags[tag.id] = tag
+        await db.delete(link)
+    await db.flush()
+    for tag in old_series_tags.values():
+        if not await db.scalar(select(FileTag.id).where(FileTag.tag_id == tag.id).limit(1)):
+            await db.delete(tag)
+    await db.flush()
     old_links = await db.execute(
         select(FileTag, Tag)
         .join(FileTag.tag)
