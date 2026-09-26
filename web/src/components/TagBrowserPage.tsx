@@ -57,7 +57,7 @@ export default function TagBrowserPage({ kind }: { kind: 'series' | 'actor' }) {
                                 </div>
                                 <p className="text-sm text-dark-500">{results?.total || 0} matching files</p>
                             </div>
-                            {filesLoading ? <p className="mt-6 text-dark-400">Loading matching media…</p> : results?.files.length ? <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">{results.files.map((file) => <MediaCard key={file.id} file={file} compact showFilename={isSeries} />)}</div> : <p className="mt-6 text-dark-500">No files found for this tag.</p>}
+                            {filesLoading ? <p className="mt-6 text-dark-400">Loading matching media…</p> : results?.files.length ? <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">{results.files.map((file) => <MediaCard key={file.id} file={file} grid showFilename={isSeries} />)}</div> : <p className="mt-6 text-dark-500">No files found for this tag.</p>}
                         </section>
                     ) : (
                         <>
