@@ -503,7 +503,7 @@ export const useMediaTags = (kind?: MediaTag['kind']) => useQuery<MediaTag[]>({
 
 export const useAutoTagLibrary = () => {
     const queryClient = useQueryClient();
-    return useMutation<unknown, Error, number | undefined>({
+    return useMutation<number, Error, number | undefined>({
         mutationFn: async (limit = 5000) => {
             let offset = 0;
             let processed = 0;
@@ -526,7 +526,7 @@ export const useAutoTagLibrary = () => {
 
 export const useResetAndRetagSeries = () => {
     const queryClient = useQueryClient();
-    return useMutation<unknown, Error, number | undefined>({
+    return useMutation<number, Error, number | undefined>({
         mutationFn: async (limit = 5000) => {
             await api.post('/media/reset-series-tags');
             let offset = 0;
