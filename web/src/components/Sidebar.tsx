@@ -1,8 +1,8 @@
-import { BarChart3, Clock3, Film, FolderOpen, Heart, History, Home, LogOut, HardDrive, Settings, Tv, Users, X } from 'lucide-react';
+import { BarChart3, Clock3, Film, FolderOpen, Heart, History, Home, LogOut, Settings, Tv, Users, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import { useAppStore } from '../lib/store';
-import { useStorageStats, formatFileSize, useLogoutAll } from '../lib/api';
+import { useLogoutAll } from '../lib/api';
 import { useState } from 'react';
 
 interface SidebarProps { isOpen: boolean; onClose: () => void; }
@@ -10,7 +10,6 @@ type LibrarySection = 'files' | 'recent' | 'continue_watching';
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const { activeSection, setActiveSection } = useAppStore();
-    const { data: storage } = useStorageStats();
     const location = useLocation();
     const navigate = useNavigate();
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -71,11 +70,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <NavItem icon={FolderOpen} label="Collections" path="/collections" />
                     <NavItem icon={BarChart3} label="Statistics" path="/stats" />
                 </nav>
-                <div className="mb-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] p-3">
-                    <div className="mb-2 flex items-center gap-2 text-xs font-medium text-dark-300"><HardDrive className="h-3.5 w-3.5 text-primary-300" /> Private library</div>
-                    <p className="text-lg font-semibold text-white">{storage ? formatFileSize(storage.total_size) : '—'}</p>
-                    <p className="mt-1 text-[11px] text-dark-500">Stored in your Telegram archive</p>
-                </div>
                 <div className="space-y-1 border-t border-white/[0.07] py-3">
                     <NavItem icon={Settings} label="Settings" path="/settings" />
                     <button onClick={() => setShowLogoutConfirm(true)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-dark-500 transition hover:bg-red-500/10 hover:text-red-300"><LogOut className="h-4.5 w-4.5" /> Logout</button>
