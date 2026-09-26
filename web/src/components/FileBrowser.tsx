@@ -132,6 +132,7 @@ export default function FileBrowser() {
     const updateFolderMutation = useUpdateFolder();
 
     const containerRef = useRef<HTMLDivElement>(null);
+    const loadingNextPageRef = useRef(false);
     const [isSelecting, setIsSelecting] = useState(false);
     const [isSidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768);
     const selectionStart = useRef({ x: 0, y: 0 });
@@ -469,30 +470,38 @@ export default function FileBrowser() {
         setSelectedFiles(selectedFiles);
     }, [selectedFileIds, displayFiles, setSelectedFiles]);
 
-    // Infinite scrolling
-    useEffect(() => {
-        const handleScroll = () => {
-            if (containerRef.current && !isLoading && hasMore && activeSection === 'files') {
-                const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-                if (scrollTop + clientHeight >= scrollHeight - 100) {
-                    // Load more files
-                    setPage(prev => prev + 1);
-                }
-            }
-        };
-
+    // Infinite scrolling. Bind through React as well as the container's scroll
+    // event so it remains reliable when the layout changes between desktop,
+    // mobile, and the fixed sidebar mode.
+    const handleScroll = useCallback(() => {
         const container = containerRef.current;
-        if (container) {
-            container.addEventListener('scroll', handleScroll);
-            return () => container.removeEventListener('scroll', handleScroll);
+        if (!container || isLoading || !hasMore || activeSection !== 'files' || loadingNextPageRef.current) return;
+        const { scrollTop, scrollHeight, clientHeight } = container;
+        if (scrollTop + clientHeight >= scrollHeight - 240) {
+            loadingNextPageRef.current = true;
+            setPage(prev => prev + 1);
         }
-    }, [isLoading, hasMore, activeSection]);
+    }, [activeSection, hasMore, isLoading]);
+
+    useEffect(() => {
+        if (!filesLoading) loadingNextPageRef.current = false;
+    }, [filesLoading, filesList]);
+
+    useEffect(() => {
+        if (activeSection !== 'files' || isLoading || !hasMore) return;
+        const frame = window.requestAnimationFrame(() => {
+            const container = containerRef.current;
+            if (container && container.scrollHeight <= container.clientHeight + 240) handleScroll();
+        });
+        return () => window.cancelAnimationFrame(frame);
+    }, [activeSection, filesList, handleScroll, hasMore, isLoading]);
 
     // Reset pagination when filters change
     useEffect(() => {
         setPage(1);
         setAllFiles([]);
         setHasMore(true);
+        loadingNextPageRef.current = false;
     }, [currentFolderId, fileTypeFilter, searchQuery, activeSection, sort]);
 
     return (
@@ -671,6 +680,7 @@ export default function FileBrowser() {
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseUp}
+                    onScroll={handleScroll}
                     tabIndex={0}
                     // Prevent default drag behaviors on container
                     onDragOver={(e) => e.preventDefault()}
