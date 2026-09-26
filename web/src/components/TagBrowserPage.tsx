@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeft, Clapperboard, Menu, Search, UserRound } from 'lucide-react';
-import { useAutoTagLibrary, useMediaSearch, useMediaTags, useMergeDuplicateFiles, MediaTag } from '../lib/api';
+import { useAutoTagLibrary, useMediaSearch, useMediaTags, useMergeDuplicateFiles, useResetAndRetagSeries, MediaTag } from '../lib/api';
 import Sidebar from './Sidebar';
 import NavRail from './NavRail';
 import MediaCard from './MediaCard';
@@ -13,6 +13,7 @@ export default function TagBrowserPage({ kind }: { kind: 'series' | 'actor' }) {
     const { data: tags, isLoading: tagsLoading } = useMediaTags(kind);
     const { data: results, isLoading: filesLoading } = useMediaSearch('', selected ? { tag: selected.value || selected.name } : {});
     const autoTag = useAutoTagLibrary();
+    const resetAndRetag = useResetAndRetagSeries();
     const mergeDuplicates = useMergeDuplicateFiles();
     const isSeries = kind === 'series';
     const Icon = isSeries ? Clapperboard : UserRound;
@@ -46,7 +47,7 @@ export default function TagBrowserPage({ kind }: { kind: 'series' | 'actor' }) {
                 </header>
                 <div className="p-6 pb-24 sm:p-10 md:pb-10 lg:p-16">
                     <div className="max-w-2xl"><h2 className="text-3xl font-bold">{isSeries ? 'Browse by series' : 'Browse by actor'}</h2></div>
-                    <div className="mt-8 flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2 text-sm text-dark-400"><Search className="h-4 w-4" /> {tags?.length || 0} {label} detected</div><div className="flex flex-wrap gap-2"><button onClick={() => mergeDuplicates.mutate()} disabled={mergeDuplicates.isPending} title="Detect the same file added twice by accident and merge it into one entry" className="btn-secondary text-xs">{mergeDuplicatesLabel}</button><button onClick={() => autoTag.mutate(5000)} disabled={autoTag.isPending} className="btn-secondary text-xs">{autoTag.isPending ? 'Tagging library…' : 'Tag library now'}</button></div></div>
+                    <div className="mt-8 flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2 text-sm text-dark-400"><Search className="h-4 w-4" /> {tags?.length || 0} {label} detected</div><div className="flex flex-wrap gap-2"><button onClick={() => mergeDuplicates.mutate()} disabled={mergeDuplicates.isPending} title="Detect the same file added twice by accident and merge it into one entry" className="btn-secondary text-xs">{mergeDuplicatesLabel}</button>{isSeries ? <button onClick={() => resetAndRetag.mutate(5000)} disabled={resetAndRetag.isPending} title="Delete only existing Series tags, then rebuild them from every video filename" className="btn-secondary text-xs">{resetAndRetag.isPending ? 'Resetting and tagging…' : 'Reset & rebuild Series'}</button> : <button onClick={() => autoTag.mutate(5000)} disabled={autoTag.isPending} className="btn-secondary text-xs">{autoTag.isPending ? 'Tagging library…' : 'Tag library now'}</button>}</div></div>
 
                     {selected ? (
                         <section className="mt-8 border-t border-white/[0.07] pt-6">

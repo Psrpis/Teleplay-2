@@ -537,6 +537,23 @@ async def auto_tag_library(
     return output
 
 
+@router.post("/reset-series-tags")
+async def reset_series_tags(
+    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    """Remove only derived Series tags; actor, technical, and custom tags remain intact."""
+    tag_ids = list((await db.execute(
+        select(Tag.id).where(Tag.user_id == current_user.id, Tag.name.like("series:%"))
+    )).scalars().all())
+    if not tag_ids:
+        return {"deleted_tags": 0, "deleted_links": 0}
+    links = await db.scalar(select(func.count(FileTag.id)).where(FileTag.tag_id.in_(tag_ids)))
+    await db.execute(delete(FileTag).where(FileTag.tag_id.in_(tag_ids)))
+    await db.execute(delete(Tag).where(Tag.id.in_(tag_ids)))
+    await db.commit()
+    return {"deleted_tags": len(tag_ids), "deleted_links": links or 0}
+
+
 @router.post("/consolidate-series-tags")
 async def consolidate_series_tags(
     db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)

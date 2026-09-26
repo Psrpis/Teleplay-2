@@ -524,6 +524,30 @@ export const useAutoTagLibrary = () => {
     });
 };
 
+export const useResetAndRetagSeries = () => {
+    const queryClient = useQueryClient();
+    return useMutation<unknown, Error, number | undefined>({
+        mutationFn: async (limit = 5000) => {
+            await api.post('/media/reset-series-tags');
+            let offset = 0;
+            let processed = 0;
+            while (true) {
+                const { data } = await api.post('/media/auto-tag', null, { params: { limit, offset } });
+                processed += data.length;
+                if (data.length < limit) break;
+                offset += data.length;
+            }
+            await api.post('/media/consolidate-series-tags');
+            return processed;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['media-tags'] });
+            queryClient.invalidateQueries({ queryKey: ['media-home'] });
+            queryClient.invalidateQueries({ queryKey: ['files'] });
+        },
+    });
+};
+
 export const useMergeDuplicateFiles = () => {
     const queryClient = useQueryClient();
     return useMutation<{ duplicate_groups_merged: number; files_removed: number }, Error, void>({
