@@ -89,6 +89,7 @@ SERIES_PREFIX_ALIASES = {
     "xvideosred": "XVideosRed",
     "houseofy re": "HouseOfFyre",
     "houseofyre": "HouseOfFyre",
+    "houseoffyre": "HouseOfFyre",
 }
 
 
