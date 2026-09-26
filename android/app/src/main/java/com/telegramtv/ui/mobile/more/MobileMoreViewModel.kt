@@ -58,6 +58,10 @@ data class MoreUiState(
     // Statistics
     val stats: MediaStats? = null,
 
+    // Series maintenance
+    val isResettingSeries: Boolean = false,
+    val seriesResetMessage: String? = null,
+
     // Surprise Me
     val surpriseItem: FileItem? = null,
     val isRollingSurprise: Boolean = false,
@@ -181,6 +185,25 @@ class MobileMoreViewModel @Inject constructor(
                 tagValue = summary.tagValue
             )
         }.sortedBy { it.name }
+
+    fun resetAndRetagSeries() {
+        if (_uiState.value.isResettingSeries) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isResettingSeries = true, seriesResetMessage = null) }
+            val result = filesRepository.resetAndRetagSeries()
+            mediaCacheStore.saveSeries(emptyList())
+            _uiState.update {
+                it.copy(
+                    isResettingSeries = false,
+                    seriesResetMessage = result.fold(
+                        onSuccess = { count -> "Series rebuilt: $count files processed" },
+                        onFailure = { error -> "Series rebuild failed: ${error.message ?: "unknown error"}" }
+                    )
+                )
+            }
+            if (result.isSuccess) loadSeries()
+        }
+    }
 
     private suspend fun loadAllVideoFiles(): List<FileItem> {
         val videos = mutableListOf<FileItem>()

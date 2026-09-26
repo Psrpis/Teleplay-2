@@ -55,6 +55,11 @@ data class AutoTagResponse(
     @SerializedName("tags") val tags: List<String> = emptyList()
 )
 
+data class ResetSeriesTagsResponse(
+    @SerializedName("deleted_tags") val deletedTags: Int = 0,
+    @SerializedName("deleted_links") val deletedLinks: Int = 0
+)
+
 data class HistoryEntry(
     @SerializedName("id") val id: Int,
     @SerializedName("file_id") val fileId: Int,
@@ -80,4 +85,3 @@ data class CreateCollectionRequest(
 data class BulkAddCollectionRequest(
     @SerializedName("query") val query: String
 )
-

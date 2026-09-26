@@ -207,7 +207,16 @@ interface TelePlayApi {
     suspend fun getSeriesSummary(): Response<List<com.telegramtv.data.model.SeriesSummary>>
 
     @POST("media/auto-tag")
-    suspend fun autoTagLibrary(@Query("limit") limit: Int = 5000): Response<List<AutoTagResponse>>
+    suspend fun autoTagLibrary(
+        @Query("limit") limit: Int = 5000,
+        @Query("offset") offset: Int = 0
+    ): Response<List<AutoTagResponse>>
+
+    @POST("media/reset-series-tags")
+    suspend fun resetSeriesTags(): Response<ResetSeriesTagsResponse>
+
+    @POST("media/consolidate-series-tags")
+    suspend fun consolidateSeriesTags(): Response<Unit>
 
     // ============ Media Parity Endpoints ============
 

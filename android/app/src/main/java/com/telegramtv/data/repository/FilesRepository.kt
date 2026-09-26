@@ -136,6 +136,29 @@ class FilesRepository @Inject constructor(
         }
     }
 
+    suspend fun resetAndRetagSeries(batchSize: Int = 500): Result<Int> {
+        return try {
+            val reset = api.resetSeriesTags()
+            if (!reset.isSuccessful) return Result.failure(Exception("Failed to reset Series tags: ${reset.code()}"))
+
+            var offset = 0
+            var processed = 0
+            while (true) {
+                val response = api.autoTagLibrary(batchSize, offset)
+                if (!response.isSuccessful) return Result.failure(Exception("Failed to retag library: ${response.code()}"))
+                val count = response.body()?.size ?: 0
+                processed += count
+                if (count < batchSize) break
+                offset += count
+            }
+            val consolidated = api.consolidateSeriesTags()
+            if (!consolidated.isSuccessful) return Result.failure(Exception("Failed to consolidate Series tags: ${consolidated.code()}"))
+            Result.success(processed)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     /**
      * Rename or move a file.
      */

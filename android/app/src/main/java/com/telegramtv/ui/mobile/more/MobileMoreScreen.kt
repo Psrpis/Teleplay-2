@@ -59,6 +59,7 @@ fun MobileMoreScreen(
     var showServerDialog by remember { mutableStateOf(false) }
     var editedServerUrl by remember(uiState.serverUrl) { mutableStateOf(uiState.serverUrl) }
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showResetSeriesDialog by remember { mutableStateOf(false) }
 
     // Back handler to navigate back to More menu or list
     BackHandler(enabled = uiState.currentSubScreen != MoreSubScreen.MENU) {
@@ -166,8 +167,11 @@ fun MobileMoreScreen(
                         selectedSeason = uiState.selectedSeason,
                         seriesSort = uiState.seriesSort,
                         serverUrl = uiState.serverUrl,
+                        isResetting = uiState.isResettingSeries,
+                        resetMessage = uiState.seriesResetMessage,
                         onSelectSeries = { viewModel.selectSeries(it) },
                         onSelectSeason = { viewModel.selectSeason(it) },
+                        onResetSeries = { showResetSeriesDialog = true },
                         onPlayFile = onPlayFile,
                         onFileClick = { viewModel.showFileDetail(it) }
                     )
@@ -332,6 +336,23 @@ fun MobileMoreScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showLogoutDialog = false }) { Text("Cancel") }
+                }
+            )
+        }
+
+        if (showResetSeriesDialog) {
+            AlertDialog(
+                onDismissRequest = { showResetSeriesDialog = false },
+                title = { Text("Reset & rebuild Series?") },
+                text = { Text("Only Series tags will be removed. The library will then be reprocessed in batches using canonical names. Other tags remain unchanged.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showResetSeriesDialog = false
+                        viewModel.resetAndRetagSeries()
+                    }) { Text("Start") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showResetSeriesDialog = false }) { Text("Cancel") }
                 }
             )
         }
@@ -606,8 +627,11 @@ private fun SeriesContent(
     selectedSeason: Int,
     seriesSort: String,
     serverUrl: String,
+    isResetting: Boolean,
+    resetMessage: String?,
     onSelectSeries: (SeriesInfo) -> Unit,
     onSelectSeason: (Int) -> Unit,
+    onResetSeries: () -> Unit,
     onPlayFile: (Int) -> Unit,
     onFileClick: (FileItem) -> Unit
 ) {
@@ -632,6 +656,33 @@ private fun SeriesContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                item {
+                    OutlinedButton(
+                        onClick = onResetSeries,
+                        enabled = !isResetting,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (isResetting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Rebuilding…")
+                        } else {
+                            Text("Reset & rebuild Series")
+                        }
+                    }
+                }
+                if (!resetMessage.isNullOrBlank()) {
+                    item {
+                        Text(
+                            text = resetMessage,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 items(seriesList) { series ->
                     Card(
                         shape = RoundedCornerShape(12.dp),
