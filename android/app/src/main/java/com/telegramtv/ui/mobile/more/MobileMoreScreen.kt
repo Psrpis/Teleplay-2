@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -153,8 +155,11 @@ fun MobileMoreScreen(
                         filter = uiState.movieFilter,
                         sort = uiState.movieSort,
                         serverUrl = uiState.serverUrl,
+                        total = uiState.moviesTotal,
+                        isLoadingMore = uiState.isLoadingMoreMovies,
                         onFilterChange = { viewModel.setMovieFilter(it) },
                         onSortChange = { viewModel.setMovieSort(it) },
+                        onLoadMore = { viewModel.loadMoreMovies() },
                         onFileClick = { viewModel.showFileDetail(it) }
                     )
                 }
@@ -543,20 +548,21 @@ private fun MoviesContent(
     filter: String,
     sort: String,
     serverUrl: String,
+    total: Int,
+    isLoadingMore: Boolean,
     onFilterChange: (String) -> Unit,
     onSortChange: (String) -> Unit,
+    onLoadMore: () -> Unit,
     onFileClick: (FileItem) -> Unit
 ) {
-    val filteredMovies = when (filter) {
-        "UNWATCHED" -> movies.filter { it.watchedState != "watched" }
-        "WATCHED" -> movies.filter { it.watchedState == "watched" }
-        else -> movies
-    }.let { list ->
-        when (sort) {
-            "TITLE" -> list.sortedBy { it.fileName.lowercase() }
-            "LENGTH" -> list.sortedByDescending { it.duration ?: 0.0 }
-            else -> list.sortedByDescending { it.createdAt }
-        }
+    val gridState = rememberLazyGridState()
+    LaunchedEffect(gridState, movies.size, total, isLoadingMore) {
+        snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }
+            .collect { lastVisibleIndex ->
+                if (!isLoadingMore && movies.isNotEmpty() && movies.size < total && lastVisibleIndex >= movies.lastIndex - 8) {
+                    onLoadMore()
+                }
+            }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -593,18 +599,19 @@ private fun MoviesContent(
             }
         }
 
-        if (filteredMovies.isEmpty()) {
+        if (movies.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("No movies found", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             LazyVerticalGrid(
+                state = gridState,
                 columns = GridCells.Adaptive(minSize = 110.dp),
                 contentPadding = PaddingValues(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(filteredMovies, key = { it.id }) { movie ->
+                itemsIndexed(movies, key = { _, movie -> movie.id }) { _, movie ->
                     MediaPosterCard(
                         file = movie,
                         serverUrl = serverUrl,
@@ -612,6 +619,14 @@ private fun MoviesContent(
                         showFilename = true,
                         showTags = true
                     )
+                }
+                if (isLoadingMore) {
+                    item {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
         }

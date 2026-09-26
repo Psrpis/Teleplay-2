@@ -411,6 +411,29 @@ class FilesRepository @Inject constructor(
         }
     }
 
+    suspend fun getMoviesPage(
+        page: Int,
+        perPage: Int = 60,
+        watched: String? = null,
+        sort: String = "recent"
+    ): Result<MediaSearchResponse> {
+        return try {
+            val response = api.searchMedia(
+                query = "",
+                fileType = "video",
+                watched = watched,
+                moviesOnly = true,
+                sort = sort,
+                page = page,
+                perPage = perPage
+            )
+            if (response.isSuccessful) Result.success(response.body() ?: MediaSearchResponse())
+            else Result.failure(Exception("Failed to load Movies page: ${response.code()}"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
 
     /**
      * Search for TV.

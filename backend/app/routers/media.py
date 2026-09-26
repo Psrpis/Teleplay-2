@@ -175,6 +175,7 @@ async def media_search(
     watched: Optional[str] = Query(None, pattern="^(watched|unwatched|in_progress)$"),
     favorite: Optional[bool] = Query(None),
     tag: Optional[str] = Query(None, max_length=80),
+    movies_only: bool = Query(False),
     collection_id: Optional[int] = Query(None, ge=1),
     year: Optional[int] = Query(None, ge=1800, le=2200),
     sort: str = Query("recent", pattern="^(recent|title|year|runtime|rating)$"),
@@ -210,6 +211,13 @@ async def media_search(
         metadata_joined = True
     if file_type:
         query = query.where(File.file_type == file_type)
+    if movies_only:
+        if not metadata_joined:
+            query = query.outerjoin(MediaMetadata, MediaMetadata.file_id == File.id)
+            metadata_joined = True
+        query = query.where(
+            or_(MediaMetadata.media_type.is_(None), ~MediaMetadata.media_type.in_(["episode", "tv"]))
+        )
     if favorite is True:
         query = query.join(Favorite, Favorite.file_id == File.id).where(Favorite.user_id == current_user.id)
     if tag:

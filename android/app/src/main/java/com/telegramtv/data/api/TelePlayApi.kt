@@ -182,7 +182,11 @@ interface TelePlayApi {
         @Query("file_type") fileType: String? = null,
         @Query("watched") watched: String? = null,
         @Query("favorite") favorite: Boolean? = null,
-        @Query("tag") tag: String? = null
+        @Query("tag") tag: String? = null,
+        @Query("movies_only") moviesOnly: Boolean = false,
+        @Query("sort") sort: String = "recent",
+        @Query("page") page: Int = 1,
+        @Query("per_page") perPage: Int = 60
     ): Response<MediaSearchResponse>
 
     @GET("media/favorites")

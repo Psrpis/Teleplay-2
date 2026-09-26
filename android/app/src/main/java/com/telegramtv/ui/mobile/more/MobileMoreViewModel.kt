@@ -40,6 +40,9 @@ data class MoreUiState(
 
     // Movies
     val movies: List<FileItem> = emptyList(),
+    val moviesTotal: Int = 0,
+    val moviesPage: Int = 0,
+    val isLoadingMoreMovies: Boolean = false,
     val movieFilter: String = "ALL", // ALL, UNWATCHED, WATCHED
     val movieSort: String = "RECENT", // RECENT, TITLE, LENGTH
 
@@ -124,22 +127,74 @@ class MobileMoreViewModel @Inject constructor(
 
     fun loadMovies() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val allVideos = loadAllVideoFiles()
-            // Filter out files that are explicitly episodes if mediaType == "episode"
-            val moviesList = allVideos.filter {
-                it.metadata?.mediaType != "episode" && it.metadata?.mediaType != "tv"
+            _uiState.update { it.copy(isLoading = true, isLoadingMoreMovies = false) }
+            val state = _uiState.value
+            val result = filesRepository.getMoviesPage(
+                page = 1,
+                watched = state.movieFilter.toWatchedQuery(),
+                sort = state.movieSort.toMediaSort()
+            )
+            result.onSuccess { response ->
+                _uiState.update {
+                    it.copy(
+                        movies = response.files,
+                        moviesTotal = response.total,
+                        moviesPage = response.page,
+                        isLoading = false,
+                        isLoadingMoreMovies = false
+                    )
+                }
+            }.onFailure {
+                _uiState.update { it.copy(movies = emptyList(), moviesTotal = 0, moviesPage = 0, isLoading = false, isLoadingMoreMovies = false) }
             }
-            _uiState.update { it.copy(movies = moviesList, isLoading = false) }
         }
     }
 
     fun setMovieFilter(filter: String) {
         _uiState.update { it.copy(movieFilter = filter) }
+        loadMovies()
     }
 
     fun setMovieSort(sort: String) {
         _uiState.update { it.copy(movieSort = sort) }
+        loadMovies()
+    }
+
+    fun loadMoreMovies() {
+        val state = _uiState.value
+        if (state.isLoading || state.isLoadingMoreMovies || state.moviesPage * 60 >= state.moviesTotal) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingMoreMovies = true) }
+            val result = filesRepository.getMoviesPage(
+                page = state.moviesPage + 1,
+                watched = state.movieFilter.toWatchedQuery(),
+                sort = state.movieSort.toMediaSort()
+            )
+            result.onSuccess { response ->
+                _uiState.update {
+                    it.copy(
+                        movies = (it.movies + response.files).distinctBy(FileItem::id),
+                        moviesTotal = response.total,
+                        moviesPage = response.page,
+                        isLoadingMoreMovies = false
+                    )
+                }
+            }.onFailure {
+                _uiState.update { it.copy(isLoadingMoreMovies = false) }
+            }
+        }
+    }
+
+    private fun String.toWatchedQuery(): String? = when (this) {
+        "WATCHED" -> "watched"
+        "UNWATCHED" -> "unwatched"
+        else -> null
+    }
+
+    private fun String.toMediaSort(): String = when (this) {
+        "TITLE" -> "title"
+        "LENGTH" -> "runtime"
+        else -> "recent"
     }
 
     fun setSeriesSort(sort: String) {
@@ -203,25 +258,6 @@ class MobileMoreViewModel @Inject constructor(
             }
             if (result.isSuccess) loadSeries()
         }
-    }
-
-    private suspend fun loadAllVideoFiles(): List<FileItem> {
-        val videos = mutableListOf<FileItem>()
-        var page = 1
-        val pageSize = 100
-        while (page <= 100) {
-            val result = filesRepository.getFiles(
-                folderId = null,
-                page = page,
-                perPage = pageSize,
-                fileType = "video"
-            )
-            val response = result.getOrNull() ?: break
-            videos += response.items
-            if (response.items.isEmpty() || videos.size >= response.total || response.items.size < pageSize) break
-            page++
-        }
-        return videos.distinctBy { it.id }
     }
 
     private fun cleanSeriesName(value: String): String = value

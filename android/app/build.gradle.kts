@@ -22,8 +22,8 @@ android {
         applicationId = "com.telegramtv"
         minSdk = 21
         targetSdk = 34
-        versionCode = 17
-        versionName = "1.6"
+        versionCode = 18
+        versionName = "1.7"
 
         val serverUrl = localProperties.getProperty("TELEGRAM_TV_SERVER_URL", "")
         buildConfigField("String", "DEFAULT_SERVER_URL", "\"$serverUrl\"")
