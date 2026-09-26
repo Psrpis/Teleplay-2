@@ -513,6 +513,7 @@ export const useAutoTagLibrary = () => {
                 if (data.length < limit) break;
                 offset += data.length;
             }
+            await api.post('/media/consolidate-series-tags');
             return processed;
         },
         onSuccess: () => {

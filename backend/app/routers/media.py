@@ -48,6 +48,7 @@ from ..services import (
     add_urls_to_file,
     auto_tag_file,
     backfill_media_metadata,
+    canonical_series_name,
     escape_like,
     fetch_continue_watching_files,
     fetch_recent_files,
@@ -534,6 +535,45 @@ async def auto_tag_library(
         output.append(AutoTagResponse(file_id=file.id, **(await auto_tag_file(db, file))))
     await db.commit()
     return output
+
+
+@router.post("/consolidate-series-tags")
+async def consolidate_series_tags(
+    db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    """Merge existing derived Series tags without requiring every file to be re-read."""
+    tags = (await db.execute(
+        select(Tag).where(Tag.user_id == current_user.id, Tag.name.like("series:%"))
+    )).scalars().all()
+    target_by_name: dict[str, Tag] = {}
+    merged = 0
+    moved_links = 0
+    for source in tags:
+        canonical_name = f"series:{canonical_series_name(source.name.split(':', 1)[1])}"
+        target = target_by_name.get(canonical_name)
+        if target is None:
+            target = (await db.execute(
+                select(Tag).where(Tag.user_id == current_user.id, Tag.name == canonical_name)
+            )).scalar_one_or_none()
+            if target is None:
+                target = source if source.name == canonical_name else Tag(user_id=current_user.id, name=canonical_name)
+                if target is not source:
+                    db.add(target)
+                    await db.flush()
+            target_by_name[canonical_name] = target
+        if source.id == target.id:
+            continue
+        links = (await db.execute(select(FileTag).where(FileTag.tag_id == source.id))).scalars().all()
+        for link in links:
+            exists = await db.scalar(select(FileTag.id).where(FileTag.file_id == link.file_id, FileTag.tag_id == target.id))
+            if exists is None:
+                db.add(FileTag(file_id=link.file_id, tag_id=target.id))
+                moved_links += 1
+            await db.delete(link)
+        await db.delete(source)
+        merged += 1
+    await db.commit()
+    return {"merged_tags": merged, "moved_links": moved_links}
 
 
 @router.get("/tags", response_model=list[TagResponse])
