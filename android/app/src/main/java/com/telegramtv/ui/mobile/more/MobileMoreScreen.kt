@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -45,6 +46,7 @@ import com.telegramtv.ui.mobile.components.MediaDetailSheet
 import com.telegramtv.ui.mobile.components.MediaPosterCard
 import com.telegramtv.ui.mobile.components.MediaWideCard
 import com.telegramtv.ui.mobile.components.horizontalPageSwipe
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.material.ExperimentalMaterialApi::class)
 @Composable
@@ -843,11 +845,61 @@ private fun ActorsContent(
                 Text("No actors found", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
+            val sortedActors = remember(actors) { actors.sortedBy { it.name.lowercase() } }
+            var selectedLetter by remember { mutableStateOf<Char?>(null) }
+            val actorLetters = ('A'..'Z').toList()
+            val filteredActors = remember(sortedActors, selectedLetter) {
+                selectedLetter?.let { letter ->
+                    sortedActors.filter { it.name.trim().firstOrNull()?.uppercaseChar() == letter }
+                } ?: sortedActors
+            }
+            val actorListState = rememberLazyListState()
+            val actorScrollScope = rememberCoroutineScope()
             LazyColumn(
+                state = actorListState,
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(actors, key = { it.id }) { actor ->
+                item(key = "actor-alphabet") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        actorLetters.forEach { letter ->
+                            val hasActors = sortedActors.any {
+                                it.name.trim().firstOrNull()?.uppercaseChar() == letter
+                            }
+                            TextButton(
+                                onClick = {
+                                    if (hasActors) {
+                                        selectedLetter = if (selectedLetter == letter) null else letter
+                                        actorScrollScope.launch { actorListState.animateScrollToItem(1) }
+                                    }
+                                },
+                                enabled = hasActors,
+                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 0.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = letter.toString(),
+                                    fontSize = 11.sp,
+                                    fontWeight = if (selectedLetter == letter) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        }
+                    }
+                }
+                if (filteredActors.isEmpty()) {
+                    item(key = "actor-no-letter-results") {
+                        Text(
+                            text = "No actors starting with ${selectedLetter ?: "this letter"}",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 20.dp)
+                        )
+                    }
+                }
+                items(filteredActors, key = { it.id }) { actor ->
                     Card(
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(

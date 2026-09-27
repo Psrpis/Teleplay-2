@@ -12,9 +12,9 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release Tag (e.g. v1.9)'
+        description: 'Release Tag (e.g. v1.10)'
         required: false
-        default: 'v1.9'
+        default: 'v1.10'
       create_release:
         description: 'Publish to GitHub Releases'
         type: boolean
@@ -42,23 +42,23 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build universal debug APK
+      - name: Build universal release APK
         working-directory: android
         run: |
           chmod +x ./gradlew
-          ./gradlew :app:assembleDebug --no-daemon
+          ./gradlew :app:assembleRelease --no-daemon
 
       - name: Generate checksum
         working-directory: android
-        run: sha256sum app/build/outputs/apk/debug/app-universal-debug.apk > app/build/outputs/apk/debug/app-universal-debug.apk.sha256
+        run: sha256sum app/build/outputs/apk/release/app-universal-release.apk > app/build/outputs/apk/release/app-universal-release.apk.sha256
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: teleplay-android-debug
+          name: teleplay-android-release
           path: |
-            android/app/build/outputs/apk/debug/app-universal-debug.apk
-            android/app/build/outputs/apk/debug/app-universal-debug.apk.sha256
+            android/app/build/outputs/apk/release/app-universal-release.apk
+            android/app/build/outputs/apk/release/app-universal-release.apk.sha256
           if-no-files-found: error
           retention-days: 14
 
@@ -70,13 +70,13 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             tag="${{ github.event.inputs.tag_name }}"
             if [ -z "$tag" ]; then
-              tag="v1.9"
+              tag="v1.10"
             fi
           else
             tag="${GITHUB_REF_NAME}"
           fi
-          apk="android/app/build/outputs/apk/debug/app-universal-debug.apk"
-          checksum="android/app/build/outputs/apk/debug/app-universal-debug.apk.sha256"
+          apk="android/app/build/outputs/apk/release/app-universal-release.apk"
+          checksum="android/app/build/outputs/apk/release/app-universal-release.apk.sha256"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$tag" "$apk" "$checksum" --repo "$GITHUB_REPOSITORY" --clobber
           else
