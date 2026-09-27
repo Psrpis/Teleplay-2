@@ -14,6 +14,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,7 +31,7 @@ import com.telegramtv.ui.mobile.components.MediaDetailSheet
 import com.telegramtv.ui.mobile.components.MediaPosterCard
 import com.telegramtv.ui.search.SearchViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.material.ExperimentalMaterialApi::class)
 @Composable
 fun MobileSearchScreen(
     viewModel: SearchViewModel = hiltViewModel(),
@@ -38,6 +41,10 @@ fun MobileSearchScreen(
     val uiState by viewModel.uiState.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
     var selectedDetailFile by remember { mutableStateOf<FileItem?>(null) }
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = uiState.isSearching,
+        onRefresh = { viewModel.refresh() }
+    )
 
     val filteredResults = remember(uiState.results, uiState.activeFilter) {
         when (uiState.activeFilter) {
@@ -48,17 +55,21 @@ fun MobileSearchScreen(
                 it.metadata?.mediaType == "episode" || it.metadata?.mediaType == "tv" || it.metadata?.season != null
             }
             "ACTORS" -> uiState.results.filter {
-                it.metadata?.cast?.isNotEmpty() == true
+                it.metadata?.cast?.isNotEmpty() == true || it.tags.any { tag ->
+                    tag.startsWith("actor:", ignoreCase = true)
+                }
             }
             else -> uiState.results
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .pullRefresh(pullRefreshState)
     ) {
+        Column(modifier = Modifier.fillMaxSize()) {
         // Search Header Bar
         Column(
             modifier = Modifier
@@ -164,6 +175,12 @@ fun MobileSearchScreen(
                 }
             }
         }
+        }
+        PullRefreshIndicator(
+            refreshing = uiState.isSearching,
+            state = pullRefreshState,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
     }
 
     // Media Detail Sheet

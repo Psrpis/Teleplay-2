@@ -20,6 +20,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.Tv
 import androidx.compose.material3.*
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,7 +45,7 @@ import com.telegramtv.ui.mobile.components.MediaDetailSheet
 import com.telegramtv.ui.mobile.components.MediaPosterCard
 import com.telegramtv.ui.mobile.components.MediaWideCard
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.material.ExperimentalMaterialApi::class)
 @Composable
 fun MobileMoreScreen(
     initialSubScreen: MoreSubScreen = MoreSubScreen.MENU,
@@ -62,6 +65,10 @@ fun MobileMoreScreen(
     var editedServerUrl by remember(uiState.serverUrl) { mutableStateOf(uiState.serverUrl) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showResetSeriesDialog by remember { mutableStateOf(false) }
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = uiState.isLoading,
+        onRefresh = { viewModel.refreshCurrent() }
+    )
 
     // Back handler to navigate back to More menu or list
     BackHandler(enabled = uiState.currentSubScreen != MoreSubScreen.MENU) {
@@ -76,6 +83,7 @@ fun MobileMoreScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .pullRefresh(pullRefreshState)
         ) {
             // Header
             Row(
@@ -211,6 +219,11 @@ fun MobileMoreScreen(
                 }
             }
         }
+        PullRefreshIndicator(
+            refreshing = uiState.isLoading,
+            state = pullRefreshState,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
 
         // Surprise Me Dialog
         uiState.surpriseItem?.let { surprise ->

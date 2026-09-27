@@ -129,6 +129,16 @@ class SearchViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(activeFilter = filter)
     }
 
+    fun refresh() {
+        val query = _uiState.value.query
+        if (query.length >= 2) {
+            searchJob?.cancel()
+            searchJob = viewModelScope.launch { search(query) }
+        } else {
+            loadFolders()
+        }
+    }
+
     // --- File Operations (Mirrored from MobileHomeViewModel) ---
     
     fun deleteFile(file: FileItem) {

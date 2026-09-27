@@ -125,6 +125,16 @@ class MobileMoreViewModel @Inject constructor(
         }
     }
 
+    fun refreshCurrent() {
+        when (_uiState.value.currentSubScreen) {
+            MoreSubScreen.MOVIES -> loadMovies()
+            MoreSubScreen.SERIES -> loadSeries()
+            MoreSubScreen.ACTORS -> loadActors()
+            MoreSubScreen.STATISTICS -> loadStats()
+            else -> Unit
+        }
+    }
+
     fun loadMovies() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, isLoadingMoreMovies = false) }
