@@ -32,7 +32,7 @@ fun Modifier.horizontalPageSwipe(
         onDrag = { change, dragAmount ->
             totalX += dragAmount.x
             totalY += dragAmount.y
-            if (abs(totalX) > abs(totalY) && abs(totalX) > 12f) change.consumePositionChange()
+            if (abs(totalX) > abs(totalY) && abs(totalX) > 12f) change.consume()
         }
     )
 }
