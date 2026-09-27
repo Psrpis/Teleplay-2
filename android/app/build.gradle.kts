@@ -36,9 +36,9 @@ android {
             val storeFileObj = if (storeFilePath != null) file(storeFilePath) else file("../my-release-key.jks")
             
             storeFile = storeFileObj
-            storePassword = System.getenv("RELEASE_STORE_PASSWORD") ?: localProperties.getProperty("RELEASE_STORE_PASSWORD", "")
+            storePassword = System.getenv("RELEASE_STORE_PASSWORD") ?: localProperties.getProperty("RELEASE_STORE_PASSWORD", "teleplay-release")
             keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: localProperties.getProperty("RELEASE_KEY_ALIAS", "my-key-alias")
-            keyPassword = System.getenv("RELEASE_KEY_PASSWORD") ?: localProperties.getProperty("RELEASE_KEY_PASSWORD", "")
+            keyPassword = System.getenv("RELEASE_KEY_PASSWORD") ?: localProperties.getProperty("RELEASE_KEY_PASSWORD", "teleplay-release")
         }
     }
 
