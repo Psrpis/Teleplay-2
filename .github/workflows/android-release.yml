@@ -12,9 +12,9 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release Tag (e.g. v1.10)'
+        description: 'Release Tag (e.g. v1.10.01)'
         required: false
-        default: 'v1.10'
+        default: 'v1.10.01'
       create_release:
         description: 'Publish to GitHub Releases'
         type: boolean
@@ -70,7 +70,7 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             tag="${{ github.event.inputs.tag_name }}"
             if [ -z "$tag" ]; then
-              tag="v1.10"
+              tag="v1.10.01"
             fi
           else
             tag="${GITHUB_REF_NAME}"

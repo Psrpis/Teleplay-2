@@ -22,6 +22,7 @@ android {
         applicationId = "com.telegramtv"
         minSdk = 21
         targetSdk = 34
+        // Keep 1.10 as the baseline; maintenance releases are 1.10.01 .. 1.10.10.
         versionCode = 21
         versionName = "1.10"
 
