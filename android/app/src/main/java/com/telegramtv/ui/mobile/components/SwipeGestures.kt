@@ -2,7 +2,6 @@ package com.telegramtv.ui.mobile.components
 
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.consume
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlin.math.abs
 
@@ -33,7 +32,7 @@ fun Modifier.horizontalPageSwipe(
         onDrag = { change, dragAmount ->
             totalX += dragAmount.x
             totalY += dragAmount.y
-            if (abs(totalX) > abs(totalY) && abs(totalX) > 12f) change.consume()
+            if (abs(totalX) > abs(totalY) && abs(totalX) > 12f) change.consumePositionChange()
         }
     )
 }
