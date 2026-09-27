@@ -34,6 +34,7 @@ import com.telegramtv.ui.mobile.components.InputDialog
 import com.telegramtv.ui.mobile.components.MediaDetailSheet
 import com.telegramtv.ui.mobile.components.MediaPosterCard
 import com.telegramtv.ui.mobile.components.MediaWideCard
+import com.telegramtv.ui.mobile.components.horizontalPageSwipe
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +59,7 @@ fun MobileLibraryScreen(
     var showBulkAddDialog by remember { mutableStateOf(false) }
     var showClearHistoryDialog by remember { mutableStateOf(false) }
     var showClearContinueWatchingDialog by remember { mutableStateOf(false) }
+    val libraryTabs = remember { LibraryTab.values().toList() }
 
     // Back handler for collection detail view
     BackHandler(enabled = uiState.selectedCollection != null) {
@@ -69,6 +71,17 @@ fun MobileLibraryScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .nestedScroll(pullToRefreshState.nestedScrollConnection)
+            .horizontalPageSwipe(
+                enabled = uiState.selectedCollection == null,
+                onSwipeLeft = {
+                    val next = uiState.selectedTab.ordinal + 1
+                    if (next < libraryTabs.size) viewModel.selectTab(libraryTabs[next])
+                },
+                onSwipeRight = {
+                    val previous = uiState.selectedTab.ordinal - 1
+                    if (previous >= 0) viewModel.selectTab(libraryTabs[previous])
+                }
+            )
     ) {
         Column(
             modifier = Modifier

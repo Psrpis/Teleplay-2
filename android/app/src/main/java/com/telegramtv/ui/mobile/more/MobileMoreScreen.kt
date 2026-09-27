@@ -44,6 +44,7 @@ import com.telegramtv.data.model.MediaTag
 import com.telegramtv.ui.mobile.components.MediaDetailSheet
 import com.telegramtv.ui.mobile.components.MediaPosterCard
 import com.telegramtv.ui.mobile.components.MediaWideCard
+import com.telegramtv.ui.mobile.components.horizontalPageSwipe
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.material.ExperimentalMaterialApi::class)
 @Composable
@@ -65,6 +66,9 @@ fun MobileMoreScreen(
     var editedServerUrl by remember(uiState.serverUrl) { mutableStateOf(uiState.serverUrl) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showResetSeriesDialog by remember { mutableStateOf(false) }
+    val contentScreens = remember {
+        listOf(MoreSubScreen.MOVIES, MoreSubScreen.SERIES, MoreSubScreen.ACTORS, MoreSubScreen.STATISTICS, MoreSubScreen.SETTINGS)
+    }
     val pullRefreshState = rememberPullRefreshState(
         refreshing = uiState.isLoading,
         onRefresh = { viewModel.refreshCurrent() }
@@ -79,6 +83,17 @@ fun MobileMoreScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .horizontalPageSwipe(
+                enabled = uiState.currentSubScreen != MoreSubScreen.MENU,
+                onSwipeLeft = {
+                    val next = contentScreens.indexOf(uiState.currentSubScreen) + 1
+                    if (next in contentScreens.indices) viewModel.navigateTo(contentScreens[next])
+                },
+                onSwipeRight = {
+                    val previous = contentScreens.indexOf(uiState.currentSubScreen) - 1
+                    if (previous in contentScreens.indices) viewModel.navigateTo(contentScreens[previous])
+                }
+            )
     ) {
         Column(
             modifier = Modifier

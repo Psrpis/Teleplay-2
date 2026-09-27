@@ -43,7 +43,6 @@ import com.telegramtv.ui.mobile.search.MobileSearchScreen
 import com.telegramtv.ui.mobile.library.MobileLibraryScreen
 import com.telegramtv.ui.mobile.more.MobileMoreScreen
 import com.telegramtv.ui.mobile.more.MoreSubScreen
-import com.telegramtv.ui.mobile.components.horizontalPageSwipe
 import androidx.compose.material3.MaterialTheme
 
 sealed class BottomNavItem(
@@ -231,41 +230,9 @@ fun MainAppScreen(
             }
         }
 
-        val swipeRoutes = listOf(
-            BottomNavItem.Home.route,
-            BottomNavItem.Search.route,
-            BottomNavItem.Library.route,
-            BottomNavItem.Movies.route,
-            BottomNavItem.Series.route,
-            BottomNavItem.Actors.route,
-            BottomNavItem.Statistics.route,
-            BottomNavItem.Settings.route
-        )
-        fun navigateToSwipeRoute(route: String) {
-            tabNavController.navigate(route) {
-                popUpTo(tabNavController.graph.findStartDestination().id) { saveState = true }
-                launchSingleTop = true
-                restoreState = true
-            }
-        }
-
         Row(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
             CompactNavigationRail(tabNavController, currentRoute)
-            Box(
-                modifier = Modifier
-                    .consumeWindowInsets(innerPadding)
-                    .fillMaxSize()
-                    .horizontalPageSwipe(
-                        onSwipeLeft = {
-                            val index = swipeRoutes.indexOfFirst { currentRoute?.startsWith(it) == true }
-                            if (index in 0 until swipeRoutes.lastIndex) navigateToSwipeRoute(swipeRoutes[index + 1])
-                        },
-                        onSwipeRight = {
-                            val index = swipeRoutes.indexOfFirst { currentRoute?.startsWith(it) == true }
-                            if (index > 0) navigateToSwipeRoute(swipeRoutes[index - 1])
-                        }
-                    )
-            ) {
+            Box(modifier = Modifier.consumeWindowInsets(innerPadding).fillMaxSize()) {
                 navHost()
             }
         }

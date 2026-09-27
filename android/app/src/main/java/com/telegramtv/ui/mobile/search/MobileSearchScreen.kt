@@ -29,6 +29,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.telegramtv.data.model.FileItem
 import com.telegramtv.ui.mobile.components.MediaDetailSheet
 import com.telegramtv.ui.mobile.components.MediaPosterCard
+import com.telegramtv.ui.mobile.components.horizontalPageSwipe
 import com.telegramtv.ui.search.SearchViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.material.ExperimentalMaterialApi::class)
@@ -41,6 +42,7 @@ fun MobileSearchScreen(
     val uiState by viewModel.uiState.collectAsState()
     val keyboardController = LocalSoftwareKeyboardController.current
     var selectedDetailFile by remember { mutableStateOf<FileItem?>(null) }
+    val searchFilters = remember { listOf("ALL", "MOVIES", "SERIES", "ACTORS") }
     val pullRefreshState = rememberPullRefreshState(
         refreshing = uiState.isSearching,
         onRefresh = { viewModel.refresh() }
@@ -107,7 +109,18 @@ fun MobileSearchScreen(
 
             // Filter Chips
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalPageSwipe(
+                        onSwipeLeft = {
+                            val next = searchFilters.indexOf(uiState.activeFilter) + 1
+                            if (next in searchFilters.indices) viewModel.setActiveFilter(searchFilters[next])
+                        },
+                        onSwipeRight = {
+                            val previous = searchFilters.indexOf(uiState.activeFilter) - 1
+                            if (previous in searchFilters.indices) viewModel.setActiveFilter(searchFilters[previous])
+                        }
+                    ),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf("ALL" to "All", "MOVIES" to "Movies", "SERIES" to "Series", "ACTORS" to "Actors").forEach { (filterKey, label) ->
