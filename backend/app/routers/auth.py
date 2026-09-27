@@ -142,10 +142,19 @@ async def generate_login_code(
     db.add(login_code)
     await db.commit()
     await db.refresh(login_code)
+
+    bot_username = None
+    try:
+        if telegram.tg_client is not None:
+            bot_username = (await telegram.tg_client.get_me()).username
+    except Exception:
+        # Code generation should still work if Telegram metadata is temporarily unavailable.
+        pass
     
     return LoginCodeResponse(
         code=code,
-        expires_at=expires_at
+        expires_at=expires_at,
+        bot_username=bot_username
     )
 
 

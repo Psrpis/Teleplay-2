@@ -238,18 +238,21 @@ fun MobileLoginScreen(
                 // Deep Link Button
                 Button(
                     onClick = {
-                        val bot = uiState.botUsername.ifBlank { "TelegramTV_Bot" }
-                        val intent = android.content.Intent(
-                            android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse("https://t.me/$bot?start=${uiState.loginCode}")
-                        )
-                        try {
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            android.widget.Toast.makeText(context, "Could not open Telegram", android.widget.Toast.LENGTH_SHORT).show()
+                        val bot = uiState.botUsername.trim().removePrefix("@")
+                        if (bot.isNotBlank()) {
+                            val intent = android.content.Intent(
+                                android.content.Intent.ACTION_VIEW,
+                                android.net.Uri.parse("https://t.me/$bot?start=${uiState.loginCode}")
+                            )
+                            try {
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                android.widget.Toast.makeText(context, "Could not open Telegram", android.widget.Toast.LENGTH_SHORT).show()
+                            }
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
+                    enabled = uiState.botUsername.isNotBlank(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.05f)),
                     shape = RoundedCornerShape(16.dp),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
@@ -261,7 +264,10 @@ fun MobileLoginScreen(
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Open @${uiState.botUsername.ifBlank { "TelegramTV_Bot" }}", color = Color.White)
+                    Text(
+                        text = if (uiState.botUsername.isNotBlank()) "Open @${uiState.botUsername.removePrefix("@")}" else "Telegram bot unavailable",
+                        color = Color.White
+                    )
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))

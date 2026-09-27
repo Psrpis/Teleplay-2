@@ -150,12 +150,15 @@ class LoginViewModel @Inject constructor(
                 
                 result.fold(
                     onSuccess = { response ->
+                        val activeBot = response.botUsername?.trim()?.removePrefix("@")
                         _uiState.value = _uiState.value.copy(
                             loginCode = response.code,
                             expiresAt = response.expiresAt,
+                            botUsername = activeBot?.takeIf { it.isNotBlank() } ?: _uiState.value.botUsername,
                             isLoading = false,
                             debugLog = _uiState.value.debugLog + "Success! Code: ${response.code}\n"
                         )
+                        if (!activeBot.isNullOrBlank()) settingsRepository.setBotUsername(activeBot)
                         startPolling(response.code)
                     },
                     onFailure = { e ->
@@ -235,4 +238,3 @@ class LoginViewModel @Inject constructor(
         stopPolling()
     }
 }
-

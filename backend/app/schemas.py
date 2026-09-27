@@ -161,6 +161,7 @@ class LoginCodeRequest(BaseModel):
 class LoginCodeResponse(BaseModel):
     code: str
     expires_at: datetime
+    bot_username: Optional[str] = None
 
 
 class VerifyCodeRequest(BaseModel):
